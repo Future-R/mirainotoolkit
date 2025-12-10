@@ -13,7 +13,7 @@ window.TOOLBOX_CONFIG = {
       "path": "counter",
       "icon": "mouse-pointer-2",
       "type": "internal",
-      "labelClass": "bg-[#f05e1c]",
+      "labelClass": "bg-[#F06E1E]",
       "iconColor": "text-white"
     },
     {
@@ -33,7 +33,7 @@ window.TOOLBOX_CONFIG = {
       "path": "dice",
       "icon": "box",
       "type": "internal",
-      "labelClass": "bg-[#6B64EF]",
+      "labelClass": "bg-[#6366F1]",
       "iconColor": "text-white"
     },
     {
@@ -53,7 +53,7 @@ window.TOOLBOX_CONFIG = {
       "path": "https://www.diffchecker.com/zh-Hans/",
       "icon": "file-diff",
       "type": "external",
-      "labelClass": "bg-[#ff9f43]",
+      "labelClass": "bg-[#00C281]",
       "iconColor": "text-white"
     },
     {
@@ -63,7 +63,7 @@ window.TOOLBOX_CONFIG = {
       "path": "https://saucenao.com/",
       "icon": "image",
       "type": "external",
-      "labelClass": "bg-[#54a0ff]",
+      "labelClass": "bg-[#383838]",
       "iconColor": "text-white"
     },
     {
@@ -73,7 +73,7 @@ window.TOOLBOX_CONFIG = {
       "path": "https://www.jyshare.com/front-end/854/",
       "icon": "code",
       "type": "external",
-      "labelClass": "bg-[#10ac84]",
+      "labelClass": "bg-[#4B5168]",
       "iconColor": "text-white"
     },
     {
@@ -83,7 +83,7 @@ window.TOOLBOX_CONFIG = {
       "path": "https://www.msdmanuals.cn/home/symptoms",
       "icon": "stethoscope",
       "type": "external",
-      "labelClass": "bg-[#ee5253]",
+      "labelClass": "bg-[#B12E32]",
       "iconColor": "text-white"
     },
     {
