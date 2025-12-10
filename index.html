@@ -12,6 +12,8 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Config Loader -->
+    <script src="config.js" onerror="console.warn('config.js failed to load, falling back to default.')"></script>
     <!-- Custom CSS -->
     <style>
         :root {
@@ -384,14 +386,109 @@
             pages: {},
             activePage: null,
             init: async function() {
-                try {
-                    const resp = await fetch('metadata.json');
-                    const meta = await resp.json();
-                    this.config = meta;
-                    console.log("Config loaded:", meta);
-                } catch(e) {
-                    console.error("Failed to load metadata.json", e);
-                    // Fallback or alert
+                // Try to load from global window object (loaded via config.js)
+                // Fallback to built-in default if config.js failed to load (e.g. file:// CORS or missing file)
+                if (window.TOOLBOX_CONFIG) {
+                    this.config = window.TOOLBOX_CONFIG;
+                    console.log("Config loaded from JS");
+                } else {
+                    console.warn("Config.js not found. Using default built-in configuration.");
+                    this.config = {
+                        "name": "未来工具箱",
+                        "description": "各种小工具。",
+                        "tools": [
+                            {
+                                "id": "counter",
+                                "name": "手动计数器",
+                                "desc": "可能是打击感最强的计数器",
+                                "path": "counter",
+                                "icon": "mouse-pointer-2",
+                                "type": "internal",
+                                "labelClass": "bg-[#f05e1c]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "anime-namer",
+                                "name": "二次元起名器",
+                                "desc": "味儿超冲",
+                                "path": "anime-namer",
+                                "icon": "sparkles",
+                                "type": "internal",
+                                "labelClass": "bg-[#e03c8a]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "dice",
+                                "name": "电子骰子",
+                                "desc": "爱信不信",
+                                "path": "dice",
+                                "icon": "box",
+                                "type": "internal",
+                                "labelClass": "bg-[#6B64EF]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "text-map",
+                                "name": "文字地图编辑器",
+                                "desc": "如果你不知道有什么用，那它就没用",
+                                "path": "text-map",
+                                "icon": "map",
+                                "type": "internal",
+                                "labelClass": "bg-[#5f27cd]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "diff-checker",
+                                "name": "文本差异对比",
+                                "desc": "Diff Checker",
+                                "path": "https://www.diffchecker.com/zh-Hans/",
+                                "icon": "file-diff",
+                                "type": "external",
+                                "labelClass": "bg-[#ff9f43]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "sauce-nao",
+                                "name": "以图搜图",
+                                "desc": "SauceNAO",
+                                "path": "https://saucenao.com/",
+                                "icon": "image",
+                                "type": "external",
+                                "labelClass": "bg-[#54a0ff]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "regex-online",
+                                "name": "正则表达式",
+                                "desc": "Regex Online",
+                                "path": "https://www.jyshare.com/front-end/854/",
+                                "icon": "code",
+                                "type": "external",
+                                "labelClass": "bg-[#10ac84]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "msd-manual",
+                                "name": "诊疗手册",
+                                "desc": "治出问题别找我",
+                                "path": "https://www.msdmanuals.cn/home/symptoms",
+                                "icon": "stethoscope",
+                                "type": "external",
+                                "labelClass": "bg-[#ee5253]",
+                                "iconColor": "text-white"
+                            },
+                            {
+                                "id": "guji-search",
+                                "name": "古籍搜索",
+                                "desc": "识典古籍",
+                                "path": "https://www.shidianguji.com/",
+                                "icon": "scroll",
+                                "type": "external",
+                                "labelClass": "bg-[#e79460]",
+                                "iconColor": "text-zinc-800"
+                            }
+                        ]
+                    };
                 }
 
                 this.Router.init();
@@ -1022,7 +1119,7 @@
                         input.style.lineHeight = "1.0";
                         input.style.letterSpacing = "0px";
                         input.style.height = "1.0em";
-                        input.style.width = `calc(${this.config.cols * 1.5}em)`; // More generous width calculation
+                        input.style.width = `calc(${this.config.cols * 2.2}em)`; // More generous width calculation to avoid scroll
                         input.style.minWidth = "100%";
                         input.spellcheck = false;
                         input.addEventListener('input', (e) => mapData[idx] = e.target.value);
