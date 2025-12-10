@@ -19,7 +19,7 @@ window.App.pages.animeNamer = {
                     <div class="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center text-white shadow-lg border-2 border-white">
                         <i data-lucide="sparkles" class="w-5 h-5"></i>
                     </div>
-                    <h2 class="text-lg font-black text-zinc-700 tracking-wider">味儿超冲</h2>
+                    <h2 class="text-lg font-black text-zinc-700 tracking-wider">下个项目就用这个名字</h2>
                 </div>
 
                 <div class="device-screen min-h-[160px] flex flex-col items-center justify-center mb-6 p-6 bg-[#1a0510]">
