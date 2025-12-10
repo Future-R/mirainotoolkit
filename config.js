@@ -29,7 +29,7 @@ window.TOOLBOX_CONFIG = {
     {
       "id": "dice",
       "name": "电子骰子",
-      "desc": "爱信不信",
+      "desc": "概率不过是信念的强度",
       "path": "dice",
       "icon": "box",
       "type": "internal",
