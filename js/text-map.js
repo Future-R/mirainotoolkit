@@ -77,7 +77,7 @@ window.App.pages.textMapEditor = {
                                     '┍','┑','┎','┒','╒','╕','╓','╖','╱','╲','┄','┅',
                                     '┕','┙','┖','┚','╘','╛','╙','╜','╲','╱','┆','┇',
                                     '①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','♨','✟',
-                                    '※','◎','□','■','♠','♥','♦','♣'].map(c => `<button class="btn-char w-full h-6 bg-white hover:bg-teal-500 hover:text-white font-mono text-xs flex items-center justify-center transition-colors">${c}</button>`).join('')}
+                                    '※','◎','□','■','♠','♥','♦','♣','↑','↓','←','→'].map(c => `<button class="btn-char w-full h-6 bg-white hover:bg-teal-500 hover:text-white font-mono text-xs flex items-center justify-center transition-colors">${c}</button>`).join('')}
                             </div>
                         </div>
                     </div>
