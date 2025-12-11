@@ -6,7 +6,7 @@ window.App.pages = window.App.pages || {};
 
 window.App.pages.jitterText = {
     settings: {
-        text: "とでも不安です",
+        text: "とても不安です",
         bgColor: "#FFFEFF",
         textColor: "#FF66CC",
         fontSize: 60,
