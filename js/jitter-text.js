@@ -28,8 +28,8 @@ window.App.pages.jitterText = {
                             <i data-lucide="vibrate" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <h2 class="text-lg font-black text-zinc-700 tracking-wider">不安的文字</h2>
-                            <div class="text-[10px] text-zinc-400 font-bold">GIF 动态生成器</div>
+                            <h2 class="text-lg font-black text-zinc-700 tracking-wider">不安抖动器</h2>
+                            <div class="text-[10px] text-zinc-400 font-bold">在宇宙中心呼唤不安</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -182,7 +182,7 @@ window.App.pages.jitterText = {
             
             // Min size 200x200
             const newWidth = Math.max(200, Math.ceil(maxWidth + paddingX * 2));
-            const newHeight = Math.max(200, Math.ceil((lines.length * lineHeight) + paddingY * 2));
+            const newHeight = Math.max(100, Math.ceil((lines.length * lineHeight) + paddingY * 2));
 
             // Resize if needed (this clears the canvas)
             if (canvas.width !== newWidth || canvas.height !== newHeight) {
@@ -295,7 +295,7 @@ window.App.pages.jitterText = {
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `jitter-text-${Date.now()}.gif`;
+                    a.download = `于${Date.now()}不安.gif`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
