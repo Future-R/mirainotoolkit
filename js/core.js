@@ -23,7 +23,7 @@ window.App.init = async function() {
             "name": "未来工具箱",
             "description": "各种小工具。",
             "tools": [
-                { "id": "card-game", "name": "阿不然打牌啰", "desc": "以智取胜", "path": "card-game", "icon": "dog", "type": "internal", "ribbon": "HOT", "labelClass": "bg-[#dc2626]", "iconColor": "text-white" },
+                { "id": "card-game", "name": "阿不然打牌啰2", "desc": "运气也是实力的一部分", "path": "card-game", "icon": "dog", "type": "internal", "labelClass": "bg-[#dc2626]", "iconColor": "text-white" },
                 { "id": "counter", "name": "手动计数器", "desc": "可能是打击感最强的计数器", "path": "counter", "icon": "mouse-pointer-2", "type": "internal", "labelClass": "bg-[#f05e1c]", "iconColor": "text-white" },
                 { "id": "anime-namer", "name": "二次元起名器", "desc": "味儿超冲", "path": "anime-namer", "icon": "sparkles", "type": "internal", "labelClass": "bg-[#e03c8a]", "iconColor": "text-white" },
                 { "id": "dice", "name": "电子骰子", "desc": "爱信不信", "path": "dice", "icon": "box", "type": "internal", "labelClass": "bg-[#6B64EF]", "iconColor": "text-white" },
