@@ -22,6 +22,10 @@ Object.assign(window.App.pages.cardGame, {
             if(window.lucide) window.lucide.createIcons(); 
             if (this.isGlobalReverse()) board.classList.add('reverse-active');
             else board.classList.remove('reverse-active');
+
+            // 渲染后确保日志滚动到底部
+            const logContainer = document.getElementById('game-log-content');
+            if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
         }
     },
 
@@ -234,7 +238,7 @@ Object.assign(window.App.pages.cardGame, {
                 <div class="hidden md:flex w-64 flex-col gap-2 shrink-0">
                      <div class="bg-white p-5 rounded-2xl shadow-lg border border-zinc-200 relative overflow-hidden"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white shadow-sm"><i data-lucide="${s.playerAvatar}" class="w-6 h-6"></i></div><div><div class="text-[9px] text-zinc-400 font-black">博弈者</div><div class="font-black text-zinc-800 truncate">${s.character ? (p.CONST.CHARACTERS[s.character]?.name) : '挑战者'}</div></div></div><div class="flex justify-between items-end border-t border-zinc-100 pt-3"><div class="flex flex-col"><span class="text-[10px] text-zinc-400 font-black">分数</span><span class="text-4xl font-black text-green-500">${totalP}</span></div><div class="flex gap-1.5 mb-1.5"><div class="w-2.5 h-2.5 rounded-full ${s.ippon[0]>0?'bg-green-500 shadow-[0_0_8px_#22c55e]':'bg-zinc-200'}"></div><div class="w-2.5 h-2.5 rounded-full ${s.ippon[0]>1?'bg-green-500 shadow-[0_0_8px_#22c55e]':'bg-zinc-200'}"></div></div></div></div>
                      <div class="bg-white p-5 rounded-2xl shadow-lg border border-zinc-200 relative overflow-hidden"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 ${enemy.bg || 'bg-rose-100'} rounded-xl flex items-center justify-center border border-rose-200/50 shadow-sm ${enemy.color || 'text-rose-500'}"><i data-lucide="${enemy.icon}" class="w-6 h-6"></i></div><div><div class="text-[9px] text-zinc-400 font-black">对手</div><div class="font-black ${enemy.color || 'text-rose-600'} truncate">${enemy.name}</div></div></div><div class="flex justify-between items-end border-t border-zinc-100 pt-3"><div class="flex flex-col"><span class="text-[10px] text-zinc-400 font-black">分数</span><span class="text-4xl font-black text-rose-500">${totalA}</span></div><div class="flex gap-1.5 mb-1.5"><div class="w-2.5 h-2.5 rounded-full ${s.ippon[1]>0?'bg-rose-500 shadow-[0_0_8px_#f43f5e]':'bg-zinc-200'}"></div><div class="w-2.5 h-2.5 rounded-full ${s.ippon[1]>1?'bg-rose-500 shadow-[0_0_8px_#f43f5e]':'bg-zinc-200'}"></div></div></div></div>
-                     <div class="flex-1 bg-zinc-900 rounded-2xl border border-zinc-800 p-4 overflow-hidden flex flex-col shadow-inner min-h-0"><div id="game-log-content" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 font-mono h-[200px]">${s.log.map(l => `<div class="text-2xl md:text-3xl font-black leading-relaxed ${l.color} mb-1 border-b border-white/5 pb-1">${l.text}</div>`).join('')}</div></div>
+                     <div class="flex-1 bg-zinc-900 rounded-2xl border border-zinc-800 p-4 overflow-hidden flex flex-col shadow-inner min-h-0"><div id="game-log-content" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 font-mono h-[200px] scroll-smooth">${s.log.map(l => `<div class="text-lg md:text-xl font-black leading-relaxed ${l.color} mb-1 border-b border-white/5 pb-1">${l.text}</div>`).join('')}</div></div>
                 </div>
                 <div class="flex-1 flex flex-col gap-2 min-w-0 relative">
                     <div class="flex justify-between items-end px-4 h-20"><div class="flex -space-x-3">${s.hands[1].map((c) => `<div id="ai-card-${c.id}" class="w-10 h-14 bg-zinc-700 border border-zinc-600 rounded-lg shadow-xl transition-all"></div>`).join('')}</div><div class="flex gap-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
@@ -380,13 +384,13 @@ Object.assign(window.App.pages.cardGame, {
         else if (this.state.pileViewMode) modalHtml = this.renderPileModal();
         
         return `
-        <div class="flex flex-col items-center justify-center h-full gap-2 md:gap-6 p-4 overflow-y-auto bg-zinc-50">
+        <div class="flex flex-col items-center h-full gap-2 md:gap-6 p-4 overflow-y-auto bg-zinc-50 relative">
             ${modalHtml}
-            <div class="text-center shrink-0 mb-1">
+            <div class="text-center shrink-0 mb-2 mt-4">
                 <h2 class="text-2xl font-black text-amber-500 uppercase tracking-tighter">对决大捷</h2>
                 <p class="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em] mt-0.5">请从下列组合中挑选心仪的资源</p>
             </div>
-            <div class="${isPort ? "flex flex-col w-full gap-2 pb-2" : "flex flex-col w-full max-w-6xl gap-5"}">
+            <div class="${isPort ? "flex flex-col w-full gap-2 pb-2" : "flex flex-col w-full max-w-6xl gap-5 pt-8 pb-12"} overflow-visible">
                 ${rewards.length > 0 ? rewards.map((group, idx) => {
                     if (!group) return '';
                     const cardsHtml = group.map(card => {
@@ -400,15 +404,15 @@ Object.assign(window.App.pages.cardGame, {
                     }).join('');
                     
                     return `
-                    <div class="bg-white rounded-[2rem] border-2 border-zinc-100 ${isPort ? 'p-1 h-28' : 'p-6 h-auto'} flex flex-row items-center justify-between gap-1 shadow-sm hover:shadow-xl transition-all group/pack overflow-visible">
+                    <div class="bg-white rounded-[2rem] border-2 border-zinc-100 ${isPort ? 'p-1 h-28' : 'p-6 h-auto'} flex flex-row items-center justify-between gap-1 shadow-sm hover:shadow-xl transition-all group/pack overflow-visible z-10 relative">
                         <div class="w-8 h-8 bg-zinc-50 rounded-lg flex items-center justify-center shrink-0 border border-zinc-100 ml-2"><span class="font-black text-zinc-300 text-sm">${idx+1}</span></div>
-                        <div class="flex-1 flex justify-center items-center overflow-x-visible">${cardsHtml}</div>
+                        <div class="flex-1 flex justify-center items-center overflow-visible">${cardsHtml}</div>
                         <button onclick="window.App.pages.cardGame.selectRewardGroup(${idx})" class="bg-zinc-900 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-lg shrink-0 mr-2">选取</button>
                     </div>`;
                 }).join('') : '<div class="text-zinc-300 font-black text-xl animate-pulse">资源整备中...</div>'}
             </div>
             
-            <div class="flex items-center gap-8 shrink-0 mt-2 mb-2">
+            <div class="flex items-center gap-8 shrink-0 mt-2 mb-8">
                 <button onclick="window.App.pages.cardGame.viewPile('draw', 0)" class="text-zinc-600 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-200 rounded-full shadow-md hover:bg-zinc-50 active:scale-95 transition-all">
                     <i data-lucide="layers" class="w-4 h-4 text-amber-500"></i> 查看我的牌库
                 </button>

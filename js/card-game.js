@@ -600,6 +600,12 @@ Object.assign(window.App.pages.cardGame, {
         if (this.state.log.length > 50) this.state.log.shift();
         const topLog = document.getElementById('portrait-top-log');
         if(topLog) topLog.innerText = msg;
+        
+        // 自动滚动日志到最新
+        setTimeout(() => {
+            const logContainer = document.getElementById('game-log-content');
+            if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
+        }, 10);
     },
     mount: function() { if(window.lucide) window.lucide.createIcons(); },
     
