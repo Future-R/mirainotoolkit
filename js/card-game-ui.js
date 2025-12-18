@@ -71,7 +71,7 @@ Object.assign(window.App.pages.cardGame, {
                 <div class="w-24 h-24 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-2xl relative z-10 border border-white/10"><i data-lucide="paw-print" class="w-12 h-12"></i></div>
             </div>
             <div>
-                <h1 class="text-4xl font-black text-zinc-800 mb-2 uppercase tracking-tighter">对决方阵 2</h1>
+                <h1 class="text-4xl font-black text-zinc-800 mb-2 uppercase tracking-tighter">阿不然打牌啰 2</h1>
                 <p class="text-zinc-400 font-bold tracking-widest uppercase text-xs">策略卡牌·镜像博弈</p>
             </div>
             <div class="max-w-md w-full bg-white p-6 rounded-xl shadow-sm border border-zinc-200">
@@ -82,7 +82,7 @@ Object.assign(window.App.pages.cardGame, {
                         <div class="flex-1"><div class="font-black text-lg">经典对决</div><div class="text-[11px] text-zinc-400 font-bold">对等牌组 · 无尽博弈</div></div>
                     </button>
                     <button onclick="window.App.pages.cardGame.selectMode('adventure')" class="group p-5 bg-zinc-50 text-zinc-600 rounded-2xl border-2 border-zinc-200 hover:border-amber-400 transition-all flex items-center gap-4 text-left relative overflow-hidden">
-                        <div class="absolute top-0 right-0 px-3 py-0.5 bg-amber-400 text-white text-[9px] font-black uppercase rounded-bl-lg">实验</div>
+                        <div class="absolute top-0 right-0 px-3 py-0.5 bg-amber-400 text-white text-[9px] font-black uppercase rounded-bl-lg">开发中，不推荐</div>
                         <div class="w-12 h-12 bg-zinc-200 rounded-xl flex items-center justify-center group-hover:bg-amber-100 group-hover:text-amber-600 transition-colors"><i data-lucide="map" class="w-7 h-7"></i></div>
                         <div class="flex-1"><div class="font-black text-lg opacity-80">冒险模式</div><div class="text-[11px] opacity-60 font-bold uppercase">探索区域 · 强化构筑</div></div>
                     </button>
