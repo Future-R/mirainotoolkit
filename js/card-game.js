@@ -437,31 +437,126 @@ Object.assign(window.App.pages.cardGame, {
         this.renderGame(); await this.processNextEffect();
     },
 
+    evaluateAiMove: function(card, fieldIdx) {
+        if (!this.canPlay(card, fieldIdx)) return -Infinity;
+        
+        const stack = this.state.fields[fieldIdx];
+        const top = stack.length > 0 ? stack[stack.length - 1] : null;
+        const score = this.calculateStackScore(fieldIdx);
+        const myVal = this.getCardValue(card);
+        const isReversed = this.isGlobalReverse();
+        const hand = this.state.hands[1];
+        
+        let weight = 0;
+        
+        // 核心逻辑重构：可持续发展
+        if (!top) {
+            // 在空地上，点数越小的牌权重越高（保留上升空间）
+            // 基础权重 = (8 - 点数) * 2。 出 1 得到 14 分，出 7 得到 2 分。
+            weight = (9 - myVal) * 2;
+        } else {
+            const topVal = this.getCardValue(top);
+            const gap = isReversed ? (topVal - myVal) : (myVal - topVal);
+            
+            // 阶梯衔接惩罚：跨度越大惩罚越高
+            // 跨度为 1 (例如 2 上放 3)：+10 分
+            // 跨度为 6 (例如 1 上放 7)：-20 分
+            weight = (8 - gap) * 3;
+            
+            // 协同检测：如果这张牌出掉后，会导致手里的某张牌在这一列变得不可用，扣分
+            hand.forEach(h => {
+                if (h.id === card.id) return;
+                const hVal = this.getCardValue(h);
+                // 模拟出牌后的情况：假设这张牌已经在顶端
+                const canStillPlayH = isReversed ? hVal < myVal : hVal > myVal;
+                // 特殊技能除外
+                if (!canStillPlayH && !this.hasSkill(h, 'domineer') && !this.hasSkill(h, 'replace')) {
+                    weight -= 5;
+                }
+            });
+        }
+        
+        // 战术权重修正
+        if (this.hasSkill(card, 'replace') && top && top.owner === 0) {
+            // 刺杀高点数敌方牌：目标越大越值得
+            weight += this.getCardValue(top) * 4;
+        }
+        if (this.hasSkill(card, 'lock')) weight += 15; // 威慑极大干扰对手
+        if (this.hasSkill(card, 'double')) weight += (score.ai + 1) * 3; // 优势扩张
+        if (this.hasSkill(card, 'dye')) weight += 10; // 领域重塑环境
+        
+        // 劣势追赶修正
+        if (score.player > score.ai) weight += 10;
+
+        return weight;
+    },
+
     aiTurn: async function() {
         const hand = this.state.hands[1];
         if (hand.length === 0) { await this.checkTurnEnd(); return; }
-        let best = null; let bestS = -9999;
+        
+        let best = null;
+        let highestWeight = -Infinity;
+        
         await new Promise(r => setTimeout(r, 700));
+
+        // 尝试所有手牌和所有位置
         for (let i = 0; i < hand.length; i++) {
             for (let f = 0; f < 3; f++) {
-                if (this.canPlay(hand[i], f)) {
-                    let s = this.getCardValue(hand[i]);
-                    if (s > bestS) { bestS = s; best = { i, f }; }
+                const weight = this.evaluateAiMove(hand[i], f);
+                if (weight > highestWeight) {
+                    highestWeight = weight;
+                    best = { i, f };
                 }
             }
         }
-        if (best) {
-            if (this.hasSkill(hand[best.i], 'train')) this.applyTraining(1, best.i, 1);
+        
+        if (best && highestWeight > -Infinity) {
+            const selectedCard = hand[best.i];
+            if (this.hasSkill(selectedCard, 'train')) {
+                // AI 特训策略：智能选择
+                const val = (selectedCard.number <= 4) ? 1 : -1;
+                this.applyTraining(1, best.i, val);
+            }
             await this.playCard(1, best.i, best.f);
         } else {
-            const idx = 0;
-            const card = hand[idx];
-            await this.animateElementExit(`ai-card-${card.id}`, true);
-            this.sendToDiscard(hand.splice(idx, 1)[0], 1); 
-            this.log("对方 弃牌并重整资源");
-            this.renderGame();
-            await new Promise(r => setTimeout(r, 400));
-            await this.checkTurnEnd();
+            // 无法出牌，弃置一张最没用的牌（通常是点数最高且无重要技能的，以便腾出空间）
+            let worstIdx = 0;
+            let lowestValueInHand = Infinity;
+            for(let i=0; i<hand.length; i++) {
+                let val = this.getCardValue(hand[i]);
+                // 保留带技能的牌
+                if (hand[i].skills.length > 0) val -= 5;
+                // 此时反而倾向于扔掉大牌，因为大牌难以打出且占用位置
+                if (val < lowestValueInHand) { lowestValueInHand = val; worstIdx = i; }
+            }
+            
+            const cardToDiscard = hand[worstIdx];
+            this.log("对方 正在整顿资源...");
+            await this.animateElementExit(`ai-card-${cardToDiscard.id}`, true);
+            
+            this.sendToDiscard(hand.splice(worstIdx, 1)[0], 1); 
+            
+            if (this.hasSkill(cardToDiscard, 'boom') || this.hasSkill(cardToDiscard, 'bounce')) {
+                let targetF = 0;
+                let maxPScore = -1;
+                for(let f=0; f<3; f++) {
+                    const s = this.calculateStackScore(f);
+                    if (s.player > maxPScore) { maxPScore = s.player; targetF = f; }
+                }
+                this.state.effectQueue.push({ 
+                    type: this.hasSkill(cardToDiscard, 'boom') ? 'boom' : 'bounce', 
+                    card: cardToDiscard, 
+                    source: 1 
+                });
+                const effect = this.state.effectQueue.shift();
+                this.state.awaitingTarget = { type: effect.type, sourcePlayer: 1, cardData: effect.card };
+                await this.resolveDiscardEffect(targetF);
+            } else {
+                this.renderGame();
+                await new Promise(r => setTimeout(r, 400));
+                await this.checkTurnEnd();
+            }
         }
     },
 
@@ -644,5 +739,23 @@ Object.assign(window.App.pages.cardGame, {
         const pos = this.state.selectedCardIndices.indexOf(idx);
         if (pos >= 0) this.state.selectedCardIndices.splice(pos, 1); else this.state.selectedCardIndices.push(idx);
         this.renderGame();
+    },
+    // Debug method to show enemy hand in console
+    showEnemyHand: function() {
+        const hand = this.state.hands[1];
+        if (!hand || hand.length === 0) {
+            console.log("敌人当前没有手牌。");
+            return;
+        }
+        const readableHand = hand.map(c => ({
+            id: c.id,
+            color: this.CONST.COLOR_NAMES[c.color],
+            number: c.number,
+            actualValue: this.getCardValue(c),
+            skills: c.skills.map(s => this.CONST.SKILLS[s].name).join(', ')
+        }));
+        console.log("%c--- 敌人当前手牌 ---", "color: #f43f5e; font-weight: bold; font-size: 14px;");
+        console.table(readableHand);
+        console.log("提示: 调用 evaluateAiMove(card, fieldIdx) 可以手动模拟 AI 的评分逻辑。");
     }
 });

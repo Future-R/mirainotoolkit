@@ -56,7 +56,7 @@ Object.assign(window.App.pages.cardGame, {
         `).join('') : '<div class="text-[11px] text-zinc-500 font-bold">常规资源卡</div>';
         
         return `
-            <div class="tooltip-box absolute bottom-full left-1/2 -translate-x-1/2 mb-5 w-72 md:w-80 bg-zinc-900 text-white p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-2 border-white/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-[500] flex flex-col gap-2.5">
+            <div class="tooltip-box absolute bottom-full left-1/2 -translate-x-1/2 mb-5 w-72 md:w-80 bg-zinc-900 text-white p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-2 border-white/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2.5">
                 <div class="text-sm font-black border-b border-white/20 pb-2 flex justify-between items-center">
                     <span class="${ownerColor} tracking-tighter">[${typeName}] ${ownerName}</span>
                     <span class="bg-zinc-800 px-2.5 py-0.5 rounded text-white font-mono text-base">P ${this.getCardValue(card)}</span>
@@ -198,7 +198,7 @@ Object.assign(window.App.pages.cardGame, {
                     <div class="flex items-center gap-2 flex-row-reverse text-right"><div class="w-10 h-10 ${enemy.bg || 'bg-rose-100'} rounded-xl flex items-center justify-center border border-zinc-200 relative shadow-sm"><i data-lucide="${enemy.icon}" class="w-5 h-5 ${enemy.color || 'text-rose-500'}"></i><div class="absolute -top-1 -right-1 flex gap-0.5"><div class="w-2 h-2 rounded-full ${s.ippon[1]>0?'bg-rose-500 shadow-[0_0_5px_#f43f5e]':'bg-zinc-300'} border border-white"></div><div class="w-2 h-2 rounded-full ${s.ippon[1]>1?'bg-rose-500 shadow-[0_0_5px_#f43f5e]':'bg-zinc-300'} border border-white"></div></div></div><div class="flex flex-col"><span class="text-xs text-zinc-400 font-black">对方</span><span class="text-xl font-black text-rose-500 leading-none">${totalA}</span></div></div>
                 </div>
                 <div class="h-8 bg-zinc-50 flex justify-between items-center px-4 relative z-10 border-b border-zinc-200"><div class="flex items-center gap-1">${s.hands[1].map((c) => `<div id="ai-card-${c.id}" class="w-3 h-4 bg-zinc-300 rounded-[2px] border border-zinc-200 transition-all"></div>`).join('')}</div><div class="flex gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-widest"><span onclick="window.App.pages.cardGame.viewPile('discard', 1)" class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm cursor-pointer hover:bg-zinc-100"><i data-lucide="trash" class="w-2.5 h-2.5 text-rose-400"></i> ${s.discardPiles[1].length}</span><span class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm"><i data-lucide="layers" class="w-2.5 h-2.5"></i> ${s.decks[1].length}</span></div></div>
-                <div class="flex-1 grid grid-cols-3 gap-2.5 p-3 pb-44 overflow-hidden relative">${[0, 1, 2].map(idx => `<div class="${(s.mode === 'scoring' && s.scoringState?.activeField !== -1 && s.scoringState?.activeField !== idx) ? 'opacity-20 grayscale' : ''} h-full relative z-0 transition-all duration-300 min-w-0">${this.renderFieldStackPortrait(idx, scores[idx])}</div>`).join('')}</div>
+                <div class="flex-1 grid grid-cols-3 gap-2.5 p-3 pb-44 overflow-hidden relative">${[0, 1, 2].map(idx => `<div class="${(s.mode === 'scoring' && s.scoringState?.activeField !== -1 && s.scoringState?.activeField !== idx) ? 'opacity-20 grayscale' : ''} h-full relative z-0 transition-all duration-300 min-w-0 field-stack">${this.renderFieldStackPortrait(idx, scores[idx])}</div>`).join('')}</div>
                 ${actionBtnHTML}
                 
                 <button onclick="window.App.pages.cardGame.viewPile('draw', 0)" class="absolute bottom-60 left-6 z-50 w-12 h-12 bg-white rounded-xl border border-zinc-200 shadow-lg flex flex-col items-center justify-center text-zinc-500 active:scale-95 transition-all"><i data-lucide="layers" class="w-4 h-4 mb-0.5"></i><span class="text-[10px] font-black">${s.decks[0].length}</span></button>
@@ -245,7 +245,7 @@ Object.assign(window.App.pages.cardGame, {
                              <div class="flex flex-col items-center"><i data-lucide="layers" class="w-4 h-4 mb-1"></i>${s.decks[1].length}</div>
                              <div class="flex flex-col items-center cursor-pointer p-2 bg-rose-50 rounded-xl border-2 border-rose-400 text-rose-600 shadow-md hover:scale-105 active:scale-95 transition-all" onclick="window.App.pages.cardGame.viewPile('discard', 1)"><i data-lucide="trash-2" class="w-5 h-5 mb-0.5"></i><span class="text-[8px] font-black">${s.discardPiles[1].length}</span></div>
                     </div></div>
-                    <div class="flex-1 grid grid-cols-3 gap-4 p-4 bg-zinc-200/50 rounded-[2.5rem] border border-zinc-300 shadow-inner relative z-0 transform-gpu">${[0, 1, 2].map(idx => `<div class="${(s.mode === 'scoring' && s.scoringState?.activeField !== -1 && s.scoringState?.activeField !== idx) ? 'opacity-20 grayscale' : ''} h-full relative z-10">${p.renderFieldStack(idx, scores[idx])}</div>`).join('')}</div>
+                    <div class="flex-1 grid grid-cols-3 gap-4 p-4 bg-zinc-200/50 rounded-[2.5rem] border border-zinc-300 shadow-inner relative z-0 transform-gpu">${[0, 1, 2].map(idx => `<div class="${(s.mode === 'scoring' && s.scoringState?.activeField !== -1 && s.scoringState?.activeField !== idx) ? 'opacity-20 grayscale' : ''} h-full relative z-10 field-stack">${p.renderFieldStack(idx, scores[idx])}</div>`).join('')}</div>
                     <div class="h-48 relative flex items-end px-4 gap-4 ${(s.mode === 'scoring') ? 'opacity-50 pointer-events-none grayscale' : ''}">
                         <div class="flex flex-col gap-3 mb-6 shrink-0 z-10"><button onclick="window.App.pages.cardGame.viewPile('draw', 0)" class="w-12 h-16 bg-zinc-800 rounded-xl border-2 border-zinc-700 flex flex-col items-center justify-center text-zinc-400 shadow-xl group"><i data-lucide="layers" class="w-5 h-5 mb-1 text-zinc-400 group-hover:text-white"></i><span class="text-[10px] font-black">${s.decks[0].length}</span></button><button onclick="window.App.pages.cardGame.viewPile('discard', 0)" class="w-12 h-16 bg-white rounded-xl border border-zinc-300 flex flex-col items-center justify-center text-zinc-500 shadow-lg hover:bg-zinc-50 group"><i data-lucide="trash-2" class="w-5 h-5 mb-1 group-hover:text-rose-500"></i><span class="text-[10px] font-black">${s.discardPiles[0].length}</span></button></div>
                         <div class="flex-1 flex items-end justify-center gap-4 -ml-6 mr-24"> ${s.hands[0].map((card, i) => p.renderPlayerCard(card, i)).join('')}</div>
@@ -267,7 +267,7 @@ Object.assign(window.App.pages.cardGame, {
         const tooltip = !this.isPortrait() && canClick ? window.App.pages.cardGame.getCardTooltip(card) : '';
 
         return `
-        <div id="small-card-${card.id}" style="${style}" ${clickAction} class="${isPortraitStack ? '' : 'absolute'} h-32 w-24 rounded-xl border-[3px] ${borderClass} ${bg} shadow-lg flex flex-col items-center justify-center text-white transition-all transform hover:scale-105 hover:!z-[100] shrink-0 group cursor-pointer overflow-visible transform-gpu">
+        <div id="small-card-${card.id}" style="${style}" ${clickAction} class="${isPortraitStack ? '' : 'absolute'} h-32 w-24 rounded-xl border-[3px] ${borderClass} ${bg} shadow-lg flex flex-col items-center justify-center text-white transition-all transform hover:scale-105 shrink-0 group cursor-pointer overflow-visible transform-gpu">
              ${tooltip}
              <div class="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
                 <div class="absolute top-1.5 right-1.5 flex gap-1 flex-wrap justify-end max-w-[80%]">${skillIcons}</div>
@@ -501,8 +501,10 @@ Object.assign(window.App.pages.cardGame, {
                     border: 8px solid rgba(139, 92, 246, 0.4);
                 }
                 @keyframes reverse-pulse { 0% { opacity: 0.4; } 100% { opacity: 0.8; } }
-                .tooltip-box { pointer-events: none; visibility: hidden; opacity: 0; transition: none !important; z-index: 500; }
+                .tooltip-box { pointer-events: none; visibility: hidden; opacity: 0; transition: none !important; z-index: 100000 !important; }
                 .group:hover > .tooltip-box { visibility: visible; opacity: 1; transition: opacity 0.2s ease-in-out !important; }
+                .group:hover { z-index: 99999 !important; }
+                .field-stack:hover { z-index: 1000 !important; }
                 .transform-gpu { transform: translateZ(0); will-change: transform; }
             `;
             document.head.appendChild(style);
