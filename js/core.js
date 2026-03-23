@@ -3,6 +3,12 @@
 // Initialize or extend window.App
 window.App = window.App || {};
 
+const cloneToolboxConfig = (config) => {
+    if (!config) return null;
+    if (typeof structuredClone === 'function') return structuredClone(config);
+    return JSON.parse(JSON.stringify(config));
+};
+
 // Explicitly define properties to avoid Object.assign race conditions
 window.App.config = window.App.config || { tools: [] };
 window.App.pages = window.App.pages || {};
@@ -14,21 +20,17 @@ window.App.init = async function() {
     
     // 1. Load Configuration
     if (window.TOOLBOX_CONFIG) {
-        window.App.config = window.TOOLBOX_CONFIG;
-        console.log("Config loaded from JS file.");
+        window.App.config = cloneToolboxConfig(window.TOOLBOX_CONFIG) || { tools: [] };
+        console.log("Config loaded from config.js.");
+    } else if (window.DEFAULT_TOOLBOX_CONFIG) {
+        window.App.config = cloneToolboxConfig(window.DEFAULT_TOOLBOX_CONFIG) || { tools: [] };
+        console.warn("config.js not found. Using bundled default configuration.");
     } else {
-        console.warn("Config.js not found. Using default built-in configuration.");
-        // Fallback default config
+        console.warn("No toolbox configuration found. Using empty fallback configuration.");
         window.App.config = {
             "name": "未来工具箱",
             "description": "各种小工具。",
-            "tools": [
-                { "id": "card-game", "name": "阿不然打牌啰2", "desc": "运气也是实力的一部分", "path": "card-game", "icon": "dog", "type": "internal", "labelClass": "bg-[#dc2626]", "iconColor": "text-white" },
-                { "id": "counter", "name": "手动计数器", "desc": "可能是打击感最强的计数器", "path": "counter", "icon": "mouse-pointer-2", "type": "internal", "labelClass": "bg-[#f05e1c]", "iconColor": "text-white" },
-                { "id": "anime-namer", "name": "二次元起名器", "desc": "味儿超冲", "path": "anime-namer", "icon": "sparkles", "type": "internal", "labelClass": "bg-[#e03c8a]", "iconColor": "text-white" },
-                { "id": "dice", "name": "电子骰子", "desc": "爱信不信", "path": "dice", "icon": "box", "type": "internal", "labelClass": "bg-[#6B64EF]", "iconColor": "text-white" },
-                { "id": "text-map", "name": "文字地图编辑器", "desc": "如果你不知道有什么用，那它就没用", "path": "text-map", "icon": "map", "type": "internal", "labelClass": "bg-[#5f27cd]", "iconColor": "text-white" }
-            ]
+            "tools": []
         };
     }
 

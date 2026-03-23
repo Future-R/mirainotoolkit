@@ -702,7 +702,11 @@ Object.assign(window.App.pages.cardGame, {
             if (logContainer) logContainer.scrollTop = logContainer.scrollHeight;
         }, 10);
     },
-    mount: function() { if(window.lucide) window.lucide.createIcons(); },
+    mount: function() {
+        if (this.ensureTooltipLayer) this.ensureTooltipLayer();
+        if (this.attachTooltipHandlers) this.attachTooltipHandlers(document.getElementById('game-board') || document);
+        if(window.lucide) window.lucide.createIcons();
+    },
     
     handleDiscardAction: function() {
         if (this.state.turn !== 0 || this.state.isProcessing) return;

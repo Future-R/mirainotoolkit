@@ -8,6 +8,8 @@ Object.assign(window.App.pages.cardGame, {
     isPortrait: function() { return window.innerHeight > window.innerWidth; },
 
     render: function() {
+        if (this.injectStyles) this.injectStyles();
+        this.resetTooltipCache();
         const isPort = this.isPortrait();
         const containerClass = isPort 
             ? "flex flex-col h-[calc(100vh-80px)] w-full fade-in relative overflow-hidden bg-zinc-50" 
@@ -16,9 +18,14 @@ Object.assign(window.App.pages.cardGame, {
     },
     
     renderGame: function() {
+        if (this.injectStyles) this.injectStyles();
         const board = document.getElementById('game-board');
         if(board) { 
+            this.hideTooltip();
+            this.resetTooltipCache();
             board.innerHTML = this.renderContent(); 
+            this.ensureTooltipLayer();
+            this.attachTooltipHandlers(board);
             if(window.lucide) window.lucide.createIcons(); 
             if (this.isGlobalReverse()) board.classList.add('reverse-active');
             else board.classList.remove('reverse-active');
@@ -37,9 +44,122 @@ Object.assign(window.App.pages.cardGame, {
             case 'battle': 
             case 'scoring': return this.isPortrait() ? this.renderBattlePortrait() : this.renderBattleLandscape();
             case 'reward': return this.renderReward();
-            case 'event': return this.renderEvent();
+            case 'event': return this.renderMap();
             default: return this.renderIntro();
         }
+    },
+
+    resetTooltipCache: function() {
+        this.tooltipCache = {};
+    },
+
+    getTooltipTriggerAttrs: function(card, enabled = true) {
+        if (!enabled || !card || this.isPortrait()) return '';
+        const key = card.id;
+        this.tooltipCache[key] = this.getCardTooltip(card);
+        return `data-card-tooltip-key="${key}"`;
+    },
+
+    ensureTooltipLayer: function() {
+        if (this._tooltipLayer && document.body.contains(this._tooltipLayer)) return;
+
+        const layer = document.createElement('div');
+        layer.id = 'card-game-tooltip-layer';
+        layer.className = 'hidden';
+        layer.innerHTML = '<div id="card-game-tooltip-content"></div>';
+        document.body.appendChild(layer);
+
+        this._tooltipLayer = layer;
+        this._tooltipContent = layer.querySelector('#card-game-tooltip-content');
+
+        if (!this._tooltipEventsBound) {
+            const hide = () => this.hideTooltip();
+            window.addEventListener('resize', hide);
+            document.addEventListener('scroll', hide, true);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hide();
+            });
+            this._tooltipEventsBound = true;
+        }
+    },
+
+    attachTooltipHandlers: function(root = document) {
+        if (this.isPortrait()) return;
+        this.ensureTooltipLayer();
+
+        root.querySelectorAll('[data-card-tooltip-key]').forEach((el) => {
+            if (el.dataset.tooltipBound === '1') return;
+            el.dataset.tooltipBound = '1';
+
+            el.addEventListener('mouseenter', () => {
+                this.showTooltip(el.dataset.cardTooltipKey, el);
+            });
+            el.addEventListener('mouseleave', () => {
+                this.hideTooltip(el);
+            });
+        });
+    },
+
+    showTooltip: function(key, anchorEl) {
+        if (!this.tooltipCache || !this.tooltipCache[key]) return;
+
+        this.ensureTooltipLayer();
+        this._tooltipAnchor = anchorEl;
+        this._tooltipContent.innerHTML = this.tooltipCache[key];
+        this._tooltipLayer.classList.remove('hidden', 'tooltip-top', 'tooltip-bottom', 'is-visible');
+        this._tooltipLayer.style.visibility = 'hidden';
+
+        requestAnimationFrame(() => {
+            if (this._tooltipAnchor !== anchorEl) return;
+            this.positionTooltip(anchorEl);
+            this._tooltipLayer.style.visibility = 'visible';
+            this._tooltipLayer.classList.add('is-visible');
+        });
+    },
+
+    positionTooltip: function(anchorEl) {
+        if (!this._tooltipLayer || !anchorEl || !document.body.contains(anchorEl)) {
+            this.hideTooltip();
+            return;
+        }
+
+        const rect = anchorEl.getBoundingClientRect();
+        const layer = this._tooltipLayer;
+        const viewportPadding = 12;
+        const gap = 14;
+        const width = layer.offsetWidth;
+        const height = layer.offsetHeight;
+
+        let left = rect.left + (rect.width / 2) - (width / 2);
+        left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+        let top = rect.top - height - gap;
+        let placement = 'top';
+
+        if (top < viewportPadding) {
+            placement = 'bottom';
+            top = rect.bottom + gap;
+        }
+
+        top = Math.max(viewportPadding, Math.min(top, window.innerHeight - height - viewportPadding));
+
+        const arrowLeft = Math.max(24, Math.min(width - 24, rect.left + (rect.width / 2) - left));
+
+        layer.classList.remove('tooltip-top', 'tooltip-bottom');
+        layer.classList.add(placement === 'top' ? 'tooltip-top' : 'tooltip-bottom');
+        layer.style.left = `${left}px`;
+        layer.style.top = `${top}px`;
+        layer.style.setProperty('--tooltip-arrow-left', `${arrowLeft}px`);
+    },
+
+    hideTooltip: function(anchorEl) {
+        if (anchorEl && this._tooltipAnchor && anchorEl !== this._tooltipAnchor) return;
+        if (!this._tooltipLayer) return;
+
+        this._tooltipAnchor = null;
+        this._tooltipLayer.classList.add('hidden');
+        this._tooltipLayer.classList.remove('tooltip-top', 'tooltip-bottom', 'is-visible');
+        this._tooltipLayer.style.visibility = 'hidden';
     },
 
     getCardTooltip: function(card) {
@@ -56,14 +176,11 @@ Object.assign(window.App.pages.cardGame, {
         `).join('') : '<div class="text-[11px] text-zinc-500 font-bold">常规资源卡</div>';
         
         return `
-            <div class="tooltip-box absolute bottom-full left-1/2 -translate-x-1/2 mb-5 w-72 md:w-80 bg-zinc-900 text-white p-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-2 border-white/10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-2.5">
-                <div class="text-sm font-black border-b border-white/20 pb-2 flex justify-between items-center">
-                    <span class="${ownerColor} tracking-tighter">[${typeName}] ${ownerName}</span>
-                    <span class="bg-zinc-800 px-2.5 py-0.5 rounded text-white font-mono text-base">P ${this.getCardValue(card)}</span>
-                </div>
-                <div class="flex flex-col">${skills}</div>
-                <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-zinc-900 rotate-45 border-r-2 border-b-2 border-white/10"></div>
+            <div class="text-sm font-black border-b border-white/20 pb-2 flex justify-between items-center">
+                <span class="${ownerColor} tracking-tighter">[${typeName}] ${ownerName}</span>
+                <span class="bg-zinc-800 px-2.5 py-0.5 rounded text-white font-mono text-base">P ${this.getCardValue(card)}</span>
             </div>
+            <div class="flex flex-col">${skills}</div>
         `;
     },
 
@@ -264,11 +381,10 @@ Object.assign(window.App.pages.cardGame, {
         
         const canClick = !this.state.awaitingTarget && this.state.selectedCardIndices.length === 0;
         const clickAction = canClick ? `onclick="event.stopPropagation(); window.App.pages.cardGame.previewCard(${JSON.stringify(card).replace(/"/g, '&quot;')})"` : '';
-        const tooltip = !this.isPortrait() && canClick ? window.App.pages.cardGame.getCardTooltip(card) : '';
+        const tooltipAttrs = this.getTooltipTriggerAttrs(card, canClick);
 
         return `
-        <div id="small-card-${card.id}" style="${style}" ${clickAction} class="${isPortraitStack ? '' : 'absolute'} h-32 w-24 rounded-xl border-[3px] ${borderClass} ${bg} shadow-lg flex flex-col items-center justify-center text-white transition-all transform hover:scale-105 shrink-0 group cursor-pointer overflow-visible transform-gpu">
-             ${tooltip}
+        <div id="small-card-${card.id}" style="${style}" ${clickAction} ${tooltipAttrs} class="${isPortraitStack ? '' : 'absolute'} h-32 w-24 rounded-xl border-[3px] ${borderClass} ${bg} shadow-lg flex flex-col items-center justify-center text-white transition-all transform hover:scale-105 shrink-0 group cursor-pointer overflow-visible transform-gpu">
              <div class="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
                 <div class="absolute top-1.5 right-1.5 flex gap-1 flex-wrap justify-end max-w-[80%]">${skillIcons}</div>
                 <div class="text-4xl font-black drop-shadow-md absolute top-1.5 left-1.5 leading-none">${this.getCardValue(card)}</div>
@@ -296,9 +412,17 @@ Object.assign(window.App.pages.cardGame, {
 
     renderFieldStack: function(idx, score) {
         const stack = this.state.fields[idx]; const stackColor = this.getStackColor(idx);
-        const standardStep = 138; let step = standardStep;
-        if (stack.length > 1 && (stack.length-1) * standardStep + 128 > 400) step = (400 - 128) / (stack.length - 1);
-        const stackVisuals = stack.map((c, i) => this.renderSmallCard(c, i, i * step)).join('');
+        const stackHeight = 460;
+        const cardHeight = 128;
+        const stackTopOffset = 56;
+        const stackBottomPadding = 12;
+        const standardStep = 138;
+        let step = standardStep;
+        const availableTrack = stackHeight - stackTopOffset - stackBottomPadding - cardHeight;
+        if (stack.length > 1 && (stack.length - 1) * standardStep > availableTrack) {
+            step = availableTrack / (stack.length - 1);
+        }
+        const stackVisuals = stack.map((c, i) => this.renderSmallCard(c, i, stackTopOffset + (i * step))).join('');
         const canPlace = (this.state.selectedCardIndices.length === 1 && this.state.turn === 0 && !this.state.awaitingTarget && this.canPlay(this.state.hands[0][this.state.selectedCardIndices[0]], idx));
         return `
         <div onclick="window.App.pages.cardGame.handleStackClick(${idx})" class="relative h-[460px] border-2 ${this.CONST.COLOR_BORDERS[stackColor]} ${stackColor === 0 ? 'bg-red-50' : stackColor === 1 ? 'bg-amber-50' : 'bg-sky-50'} rounded-2xl flex flex-col transition-all cursor-pointer hover:bg-black/5 overflow-visible z-0 transform-gpu ${canPlace ? 'ring-4 ring-green-400 shadow-[0_0_20px_rgba(74,222,128,0.4)]' : ''}">
@@ -308,7 +432,7 @@ Object.assign(window.App.pages.cardGame, {
                  <div class="bg-white/95 px-2 py-1 rounded text-[10px] font-black ${this.CONST.COLOR_TEXT[stackColor]} shadow-sm border border-black/5">${this.CONST.COLOR_NAMES[stackColor]}</div>
                  <div class="flex flex-col items-end"><span class="text-xs font-black ${score.ai > score.player ? 'text-red-500' : 'text-zinc-400'}">${score.ai}</span><div class="w-full h-[1px] bg-zinc-300 my-0.5"></div><span class="text-sm font-black ${score.player > score.ai ? 'text-green-500' : 'text-zinc-600'}">${score.player}</span></div>
             </div>
-            <div id="stack-container-${idx}" class="relative w-full h-full mt-10 overflow-visible pointer-events-none transform-gpu"><div class="pointer-events-auto">${stackVisuals}</div></div>
+            <div id="stack-container-${idx}" class="relative w-full h-full overflow-visible pointer-events-none transform-gpu"><div class="pointer-events-auto">${stackVisuals}</div></div>
         </div>`;
     },
 
@@ -322,10 +446,10 @@ Object.assign(window.App.pages.cardGame, {
         const clickAction = `onclick="window.App.pages.cardGame.selectCard(${idx})"`;
         const canPreview = !this.state.awaitingTarget && this.state.selectedCardIndices.length === 0;
         const longPressAction = canPreview ? `oncontextmenu="event.preventDefault(); window.App.pages.cardGame.previewCard(${JSON.stringify(card).replace(/"/g, '&quot;')})"` : 'oncontextmenu="event.preventDefault();"';
+        const tooltipAttrs = this.getTooltipTriggerAttrs(card, canPreview);
         
         return `
-        <div id="card-${card.id}" class="group relative flex flex-col items-center ${(Date.now() - (card.drawnAt || 0) < 500) ? 'animate-draw' : ''} overflow-visible transform-gpu">
-            ${canPreview ? window.App.pages.cardGame.getCardTooltip(card) : ''}
+        <div id="card-${card.id}" ${tooltipAttrs} class="group relative flex flex-col items-center ${(Date.now() - (card.drawnAt || 0) < 500) ? 'animate-draw' : ''} overflow-visible transform-gpu">
             <div ${clickAction} ${longPressAction} class="w-32 h-48 shrink-0 rounded-[1.25rem] ${bg} border-[5px] ${activeClass} relative flex flex-col items-center p-3 text-white cursor-pointer transition-all duration-300 select-none overflow-hidden shadow-2xl">
                 <div class="absolute top-2.5 right-3 opacity-40"><i data-lucide="${this.CONST.COLOR_ICONS[card.color]}" class="w-7 h-7"></i></div>
                 ${isPortraitFan ? `<div class="absolute top-1.5 left-3 text-5xl font-black drop-shadow-md z-10 leading-none">${this.getCardValue(card)}</div>` : `<div class="mt-6 text-7xl font-black drop-shadow-md">${this.getCardValue(card)}</div>`}
@@ -355,7 +479,7 @@ Object.assign(window.App.pages.cardGame, {
                     <button onclick="window.App.pages.cardGame.closeModal()" class="w-10 h-10 flex items-center justify-center hover:bg-zinc-200 rounded-full transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
                 </div>
                 <div class="flex-1 overflow-y-auto p-6 bg-zinc-100">
-                    <div class="${isPort ? "grid grid-cols-4 gap-2 place-items-center" : "flex flex-wrap justify-center gap-5"} overflow-visible mt-8">
+                    <div class="${isPort ? "grid grid-cols-4 gap-2 place-items-center pt-20 pb-4" : "flex flex-wrap justify-center gap-5 pt-28 pb-4"} overflow-visible">
                         ${cards.length === 0 ? '<div class="col-span-4 text-zinc-300 font-black py-20 w-full text-center tracking-[0.3em] text-sm uppercase">暂无数据</div>' : cards.map(c => `
                             <div style="${isPort ? 'width: 76px; height: 114px;' : 'width: 128px; height: 192px;'}" class="relative overflow-visible shrink-0 transform-gpu">
                                 <div style="${isPort ? 'transform: scale(0.6); transform-origin: top left;' : 'transform: scale(0.9);'}" class="overflow-visible transform-gpu">
@@ -421,23 +545,12 @@ Object.assign(window.App.pages.cardGame, {
         </div>`;
     },
 
-    renderEvent: function() {
-        const evt = this.state.eventData; let content = '';
-        if (evt.type === 'shop') {
-             const remMode = evt.removalMode;
-             content = `<div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm"><i data-lucide="store" class="w-8 h-8"></i></div><h3 class="text-2xl font-black text-zinc-800 mb-1">对战整备</h3><div class="flex items-center gap-2 mb-8 bg-yellow-50 px-4 py-1.5 rounded-full border border-yellow-200 text-yellow-700 font-black text-xs shadow-sm"><i data-lucide="coins" class="w-4 h-4"></i> ${this.state.gold} 金币</div><div class="grid grid-cols-2 gap-4 w-full max-w-lg mb-4"><button id="btn-buy-pack" onclick="window.App.pages.cardGame.buyCardPack()" class="flex flex-col items-center p-8 bg-white border-2 border-zinc-100 rounded-3xl hover:border-purple-300 transition-all"><i data-lucide="package-plus" class="w-8 h-8 text-purple-500 mb-3"></i><span class="font-black text-sm uppercase tracking-widest text-zinc-700">随机包</span><span class="text-[10px] font-black text-yellow-600 mt-1">50 G</span></button><button id="btn-toggle-removal" onclick="window.App.pages.cardGame.toggleRemovalMode()" class="flex flex-col items-center p-8 bg-white border-2 border-zinc-100 rounded-3xl hover:border-rose-300 transition-all ${remMode ? 'ring-4 ring-rose-500/20 border-rose-500' : ''}"><i data-lucide="trash-2" class="w-8 h-8 text-rose-500 mb-3"></i><span class="font-black text-sm uppercase tracking-widest text-zinc-700">精简</span><span class="text-[10px] font-black text-yellow-600 mt-1">100 G</span></button></div>${remMode ? `<div class="w-full mt-6"><p class="text-center text-rose-500 text-[10px] font-black mb-4 animate-pulse">选择要移除的卡牌</p><div class="flex flex-wrap justify-center gap-2 max-h-[300px] overflow-y-auto p-4 bg-zinc-100 rounded-2xl transform-gpu">${this.state.playerDeck.map((c, i) => `<div onclick="window.App.pages.cardGame.buyRemoval(${i})" class="scale-[0.6] -mx-7 cursor-pointer hover:opacity-80 transition-opacity relative group transform-gpu"><div class="absolute inset-0 bg-rose-500/40 z-10 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 font-black text-white text-[10px] uppercase">销毁</div>${this.renderCardStatic(c)}</div>`).join('')}</div></div>` : ''}<button onclick="window.App.pages.cardGame.resolveEvent()" class="mt-8 text-zinc-400 hover:text-zinc-600 font-black text-[10px] uppercase tracking-[0.3em]">离开</button>`;
-        } else if (evt.type === 'blacksmith') {
-             content = `<div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm"><i data-lucide="hammer" class="w-8 h-8"></i></div><h3 class="text-2xl font-black text-zinc-800 mb-1">强化设施</h3><p class="text-zinc-500 mb-8 text-center max-w-xs font-bold text-sm leading-relaxed">指定一张牌进行特殊强化：点数额外+1并随机获得一个技能。</p><div class="flex flex-wrap justify-center gap-2 max-h-[350px] overflow-y-auto p-4 bg-zinc-100 rounded-2xl w-full max-w-3xl transform-gpu">${this.state.playerDeck.map((c, i) => `<div onclick="window.App.pages.cardGame.state.eventData.selectedIdx = ${i}; window.App.pages.cardGame.resolveEvent()" class="scale-[0.6] -mx-7 cursor-pointer hover:opacity-80 transition-opacity transform-gpu"> ${this.renderCardStatic(c)} </div>`).join('')}</div><button onclick="window.App.pages.cardGame.state.eventData.selectedIdx = null; window.App.pages.cardGame.resolveEvent()" class="mt-10 text-zinc-400 hover:text-zinc-600 font-black text-[10px] uppercase tracking-[0.3em]">跳过</button>`;
-        } else content = `<div class="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm"><i data-lucide="tent" class="w-8 h-8"></i></div><h3 class="text-2xl font-black text-zinc-800 mb-1">临时安全区</h3><p class="text-zinc-500 mb-8 text-center max-w-xs font-bold text-sm leading-relaxed">暂时休整以应对后续挑战。</p><button onclick="window.App.pages.cardGame.resolveEvent()" class="atom-btn px-12 py-4 bg-zinc-900 text-white shadow-xl shadow-zinc-200 transition-transform active:scale-95">重新出发</button>`;
-        return `<div class="flex flex-col items-center justify-center h-full fade-in p-6">${content}</div>`;
-    },
-
     renderCardStatic: function(card) {
         if (!card) return '';
         const bg = this.CONST.COLORS[card.color];
+        const tooltipAttrs = this.getTooltipTriggerAttrs(card, !this.isPortrait());
         return `
-        <div class="group relative w-32 h-48 select-none overflow-visible transform-gpu">
-            ${!this.isPortrait() ? window.App.pages.cardGame.getCardTooltip(card) : ''}
+        <div ${tooltipAttrs} class="group relative w-32 h-48 select-none overflow-visible transform-gpu">
             <div class="absolute inset-0 rounded-[1.25rem] ${bg} border-[5px] border-white shadow-xl flex flex-col items-center p-4 text-white overflow-hidden">
                 <div class="absolute top-2.5 right-3 opacity-40"><i data-lucide="${this.CONST.COLOR_ICONS[card.color]}" class="w-7 h-7"></i></div>
                 <div class="mt-6 text-7xl font-black drop-shadow-md leading-none">${this.getCardValue(card)}</div>
@@ -501,11 +614,46 @@ Object.assign(window.App.pages.cardGame, {
                     border: 8px solid rgba(139, 92, 246, 0.4);
                 }
                 @keyframes reverse-pulse { 0% { opacity: 0.4; } 100% { opacity: 0.8; } }
-                .tooltip-box { pointer-events: none; visibility: hidden; opacity: 0; transition: none !important; z-index: 100000 !important; }
-                .group:hover > .tooltip-box { visibility: visible; opacity: 1; transition: opacity 0.2s ease-in-out !important; }
                 .group:hover { z-index: 99999 !important; }
                 .field-stack:hover { z-index: 1000 !important; }
                 .transform-gpu { transform: translateZ(0); will-change: transform; }
+                #card-game-tooltip-layer {
+                    position: fixed;
+                    z-index: 2147483647;
+                    pointer-events: none;
+                    width: min(20rem, calc(100vw - 24px));
+                    padding: 1rem;
+                    border-radius: 1rem;
+                    background: #18181b;
+                    color: white;
+                    border: 2px solid rgba(255,255,255,0.1);
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                    opacity: 0;
+                    transform: translateY(4px);
+                    transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+                }
+                #card-game-tooltip-layer.is-visible {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+                #card-game-tooltip-layer::after {
+                    content: '';
+                    position: absolute;
+                    left: var(--tooltip-arrow-left, 50%);
+                    width: 16px;
+                    height: 16px;
+                    background: #18181b;
+                    border-right: 2px solid rgba(255,255,255,0.1);
+                    border-bottom: 2px solid rgba(255,255,255,0.1);
+                    transform: translateX(-50%) rotate(45deg);
+                }
+                #card-game-tooltip-layer.tooltip-top::after {
+                    bottom: -10px;
+                }
+                #card-game-tooltip-layer.tooltip-bottom::after {
+                    top: -10px;
+                    transform: translateX(-50%) rotate(225deg);
+                }
             `;
             document.head.appendChild(style);
         }
