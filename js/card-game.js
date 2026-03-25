@@ -37,7 +37,8 @@ Object.assign(window.App.pages.cardGame, {
         hintDismissed: false,
         playerAvatar: 'paw-print',
         enemyData: null,
-        rewardGroups: []
+        rewardGroups: [],
+        rulesOpen: false
     },
 
     createCard: function(ownerId, color, number, skills = []) {
@@ -120,6 +121,7 @@ Object.assign(window.App.pages.cardGame, {
         this.injectStyles();
         this.state.mode = 'intro';
         this.state.hintDismissed = false;
+        this.state.rulesOpen = false;
         this.renderGame();
     },
 
@@ -154,6 +156,7 @@ Object.assign(window.App.pages.cardGame, {
         this.state.showLog = false;
         this.state.previewCard = null;
         this.state.hasPlayedInThisRound = false;
+        this.state.rulesOpen = false;
         
         if (this.state.gameMode === 'classic') {
             this.state.log = [{ text: `阿不然打牌啰 2：系统初始化。`, color: 'text-sky-400 font-bold' }];
@@ -366,7 +369,7 @@ Object.assign(window.App.pages.cardGame, {
     executeDiscard: async function() {
         this.state.isProcessing = true;
         const indices = this.state.selectedCardIndices;
-        this.log(indices.length >= 2 ? `战术更替：弃置 ${indices.length} 张并补牌` : "弃置手牌");
+        this.log(indices.length >= 2 ? `重组：弃置 ${indices.length} 张并补 1 张牌` : "弃置手牌");
         
         if (indices.length >= 2) this.state.pendingDraw = 1;
 
@@ -681,6 +684,14 @@ Object.assign(window.App.pages.cardGame, {
 
     handleBattleLoss: function() { alert("挑战失败。"); this.initGame(); },
     toggleLog: function() { this.state.showLog = !this.state.showLog; this.renderGame(); },
+    openRules: function() {
+        this.state.rulesOpen = true;
+        this.state.pileViewMode = null;
+        this.state.discardConfirmOpen = false;
+        this.state.trainingPending = null;
+        this.state.previewCard = null;
+        this.renderGame();
+    },
     previewCard: function(card) { 
         if (this.state.awaitingTarget || this.state.selectedCardIndices.length > 0) return;
         this.state.previewCard = card; 
@@ -689,7 +700,7 @@ Object.assign(window.App.pages.cardGame, {
     },
     closePreview: function() { this.state.previewCard = null; this.renderGame(); },
     viewPile: function(type, owner = 0) { this.state.pileViewMode = { type: type, owner: owner }; this.renderGame(); },
-    closeModal: function() { this.state.pileViewMode = null; this.state.discardConfirmOpen = false; this.state.trainingPending = null; this.state.previewCard = null; this.renderGame(); },
+    closeModal: function() { this.state.pileViewMode = null; this.state.discardConfirmOpen = false; this.state.trainingPending = null; this.state.previewCard = null; this.state.rulesOpen = false; this.renderGame(); },
     log: function(msg, colorClass = "text-zinc-400") {
         this.state.log.push({ text: msg, color: colorClass });
         if (this.state.log.length > 50) this.state.log.shift();

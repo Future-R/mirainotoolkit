@@ -184,6 +184,28 @@ Object.assign(window.App.pages.cardGame, {
         `;
     },
 
+    renderRulesPanel: function() {
+        return `
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
+                <i data-lucide="scroll-text" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <div class="text-[10px] text-zinc-400 font-black uppercase tracking-[0.2em]">规则说明</div>
+                <h3 class="text-lg font-black text-zinc-800">基础规则</h3>
+            </div>
+        </div>
+        <div class="space-y-2.5 text-sm text-zinc-600 font-bold leading-relaxed">
+            <div>1. 你的回合可执行一项行动：出牌、弃牌或重组。</div>
+            <div>2. 出牌：将手牌打到对应颜色区域。通常需要比该区域顶端牌更大，特殊技能会改写这条规则。</div>
+            <div>3. 弃牌：弃置 1 张手牌。</div>
+            <div>4. 重组：弃置至少 2 张手牌，然后补 1 张牌。</div>
+            <div>5. 双方手牌都打完后开始结算。场上每张牌基础计 1 分，带加分技能的牌会额外加分，总分更高者赢下该局。</div>
+            <div>6. 采用三局两胜制，先赢下两局的一方获得整场胜利。</div>
+        </div>
+        <div class="mt-4 text-[10px] text-zinc-400 font-black tracking-[0.18em] uppercase">具体效果以牌面技能说明为准</div>`;
+    },
+
     renderIntro: function() {
         return `
         <div class="flex flex-col items-center justify-center h-full gap-8 text-center p-4">
@@ -282,12 +304,13 @@ Object.assign(window.App.pages.cardGame, {
         let actionBtnHTML = (selCount > 0) ? `
             <button onclick="window.App.pages.cardGame.handleDiscardAction()" class="absolute bottom-32 right-6 z-[60] w-16 h-16 rounded-full ${selCount >= 2 ? "bg-sky-500 border-sky-600" : "bg-orange-500 border-orange-600"} text-white border-b-4 shadow-xl flex flex-col items-center justify-center active:translate-y-1 transition-all animate-bounce">
                 <i data-lucide="${selCount >= 2 ? 'refresh-cw' : 'trash-2'}" class="w-6 h-6"></i>
-                <span class="text-[10px] font-black mt-0.5">${selCount >= 2 ? "更替" : "弃牌"}</span>
+                <span class="text-[10px] font-black mt-0.5">${selCount >= 2 ? "重组" : "弃牌"}</span>
             </button>` : '';
 
         let modalHtml = '';
         if (s.discardConfirmOpen) modalHtml = p.renderDiscardModal();
         else if (s.trainingPending) modalHtml = p.renderTrainModal();
+        else if (s.rulesOpen) modalHtml = p.renderRulesModal();
         else if (s.pileViewMode) modalHtml = p.renderPileModal();
         if (s.previewCard) modalHtml += p.renderCardDetailModal(s.previewCard);
 
@@ -314,7 +337,7 @@ Object.assign(window.App.pages.cardGame, {
                     <button onclick="window.App.pages.cardGame.toggleLog()" class="flex-1 flex flex-col items-center px-4 max-w-[200px] cursor-pointer"><div class="text-[8px] font-black text-zinc-400 mb-0.5">第 ${s.ippon[0]+s.ippon[1]+1} 局</div><div id="portrait-top-log" class="text-[10px] text-zinc-500 font-bold truncate w-full text-center bg-zinc-50 py-1.5 px-3 rounded-lg border border-zinc-200 shadow-inner">${latestMsg}</div></button>
                     <div class="flex items-center gap-2 flex-row-reverse text-right"><div class="w-10 h-10 ${enemy.bg || 'bg-rose-100'} rounded-xl flex items-center justify-center border border-zinc-200 relative shadow-sm"><i data-lucide="${enemy.icon}" class="w-5 h-5 ${enemy.color || 'text-rose-500'}"></i><div class="absolute -top-1 -right-1 flex gap-0.5"><div class="w-2 h-2 rounded-full ${s.ippon[1]>0?'bg-rose-500 shadow-[0_0_5px_#f43f5e]':'bg-zinc-300'} border border-white"></div><div class="w-2 h-2 rounded-full ${s.ippon[1]>1?'bg-rose-500 shadow-[0_0_5px_#f43f5e]':'bg-zinc-300'} border border-white"></div></div></div><div class="flex flex-col"><span class="text-xs text-zinc-400 font-black">对方</span><span class="text-xl font-black text-rose-500 leading-none">${totalA}</span></div></div>
                 </div>
-                <div class="h-8 bg-zinc-50 flex justify-between items-center px-4 relative z-10 border-b border-zinc-200"><div class="flex items-center gap-1">${s.hands[1].map((c) => `<div id="ai-card-${c.id}" class="w-3 h-4 bg-zinc-300 rounded-[2px] border border-zinc-200 transition-all"></div>`).join('')}</div><div class="flex gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-widest"><span onclick="window.App.pages.cardGame.viewPile('discard', 1)" class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm cursor-pointer hover:bg-zinc-100"><i data-lucide="trash" class="w-2.5 h-2.5 text-rose-400"></i> ${s.discardPiles[1].length}</span><span class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm"><i data-lucide="layers" class="w-2.5 h-2.5"></i> ${s.decks[1].length}</span></div></div>
+                <div class="h-8 bg-zinc-50 flex justify-between items-center px-4 relative z-10 border-b border-zinc-200"><div class="flex items-center gap-1">${s.hands[1].map((c) => `<div id="ai-card-${c.id}" class="w-3 h-4 bg-zinc-300 rounded-[2px] border border-zinc-200 transition-all"></div>`).join('')}</div><div class="flex gap-2 text-[9px] font-black text-zinc-400 uppercase tracking-widest"><span onclick="window.App.pages.cardGame.openRules()" class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm cursor-pointer hover:bg-zinc-100"><i data-lucide="book-open" class="w-2.5 h-2.5 text-sky-500"></i> 规则</span><span onclick="window.App.pages.cardGame.viewPile('discard', 1)" class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm cursor-pointer hover:bg-zinc-100"><i data-lucide="trash" class="w-2.5 h-2.5 text-rose-400"></i> ${s.discardPiles[1].length}</span><span class="flex items-center gap-1 bg-white border border-zinc-300 px-2 py-0.5 rounded shadow-sm"><i data-lucide="layers" class="w-2.5 h-2.5"></i> ${s.decks[1].length}</span></div></div>
                 <div class="flex-1 grid grid-cols-3 gap-2.5 p-3 pb-44 overflow-hidden relative">${[0, 1, 2].map(idx => `<div class="${(s.mode === 'scoring' && s.scoringState?.activeField !== -1 && s.scoringState?.activeField !== idx) ? 'opacity-20 grayscale' : ''} h-full relative z-0 transition-all duration-300 min-w-0 field-stack">${this.renderFieldStackPortrait(idx, scores[idx])}</div>`).join('')}</div>
                 ${actionBtnHTML}
                 
@@ -339,10 +362,11 @@ Object.assign(window.App.pages.cardGame, {
         const selCount = s.selectedCardIndices.length; const enemy = s.enemyData || { name: '对手', icon: 'cat', color: 'text-zinc-500' };
         const isRev = this.isGlobalReverse();
 
-        let actionBtnHTML = (selCount > 0) ? `<div class="absolute right-6 bottom-8 z-20"><button onclick="window.App.pages.cardGame.handleDiscardAction()" class="w-24 h-24 rounded-full border-4 font-black transition-all flex flex-col items-center justify-center gap-1 shadow-2xl active:scale-95 ${selCount >= 2 ? "bg-sky-100 text-sky-600 border-sky-200" : "bg-orange-100 text-orange-600 border-orange-200"}"><i data-lucide="${selCount >= 2 ? 'refresh-cw' : 'trash-2'}" class="w-7 h-7"></i><span class="text-[10px] uppercase tracking-widest">${selCount >= 2 ? "更替" : "弃牌"}</span></button></div>` : '';
+        let actionBtnHTML = (selCount > 0) ? `<div class="absolute right-6 bottom-8 z-20"><button onclick="window.App.pages.cardGame.handleDiscardAction()" class="w-24 h-24 rounded-full border-4 font-black transition-all flex flex-col items-center justify-center gap-1 shadow-2xl active:scale-95 ${selCount >= 2 ? "bg-sky-100 text-sky-600 border-sky-200" : "bg-orange-100 text-orange-600 border-orange-200"}"><i data-lucide="${selCount >= 2 ? 'refresh-cw' : 'trash-2'}" class="w-7 h-7"></i><span class="text-[10px] uppercase tracking-widest">${selCount >= 2 ? "重组" : "弃牌"}</span></button></div>` : '';
         let modalHtml = '';
         if (s.discardConfirmOpen) modalHtml = p.renderDiscardModal();
         else if (s.trainingPending) modalHtml = p.renderTrainModal();
+        else if (s.rulesOpen) modalHtml = p.renderRulesModal();
         else if (s.pileViewMode) modalHtml = p.renderPileModal();
         if (s.previewCard) modalHtml += p.renderCardDetailModal(s.previewCard);
 
@@ -359,6 +383,7 @@ Object.assign(window.App.pages.cardGame, {
                 </div>
                 <div class="flex-1 flex flex-col gap-2 min-w-0 relative">
                     <div class="flex justify-between items-end px-4 h-20"><div class="flex -space-x-3">${s.hands[1].map((c) => `<div id="ai-card-${c.id}" class="w-10 h-14 bg-zinc-700 border border-zinc-600 rounded-lg shadow-xl transition-all"></div>`).join('')}</div><div class="flex gap-4 text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                             <div class="flex flex-col items-center cursor-pointer p-2 bg-sky-50 rounded-xl border border-sky-200 text-sky-600 shadow-sm hover:scale-105 active:scale-95 transition-all" onclick="window.App.pages.cardGame.openRules()"><i data-lucide="book-open" class="w-5 h-5 mb-0.5"></i><span class="text-[8px] font-black">规则</span></div>
                              <div class="flex flex-col items-center"><i data-lucide="layers" class="w-4 h-4 mb-1"></i>${s.decks[1].length}</div>
                              <div class="flex flex-col items-center cursor-pointer p-2 bg-rose-50 rounded-xl border-2 border-rose-400 text-rose-600 shadow-md hover:scale-105 active:scale-95 transition-all" onclick="window.App.pages.cardGame.viewPile('discard', 1)"><i data-lucide="trash-2" class="w-5 h-5 mb-0.5"></i><span class="text-[8px] font-black">${s.discardPiles[1].length}</span></div>
                     </div></div>
@@ -492,8 +517,28 @@ Object.assign(window.App.pages.cardGame, {
         </div>`;
     },
 
+    renderRulesModal: function() {
+        return `
+        <div onclick="window.App.pages.cardGame.closeModal()" class="fixed inset-0 z-[600] bg-black/80 flex items-center justify-center p-4 animate-in fade-in duration-200 transform-gpu">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border-4 border-zinc-100">
+                <div class="p-4 border-b border-zinc-100 flex justify-between items-center bg-zinc-50 shrink-0">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">规则说明</span>
+                        <h3 class="text-lg font-black text-zinc-800">对局规则</h3>
+                    </div>
+                    <button onclick="window.App.pages.cardGame.closeModal()" class="w-10 h-10 flex items-center justify-center hover:bg-zinc-200 rounded-full transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 bg-zinc-50">
+                    <div class="bg-white rounded-2xl shadow-sm border border-zinc-200 p-6">
+                        ${this.renderRulesPanel()}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    },
+
     renderDiscardModal: function() {
-        return `<div class="fixed inset-0 z-[500] bg-black/70 flex items-center justify-center p-6 transform-gpu"><div class="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 border-4 border-zinc-100 animate-in zoom-in duration-200"><div class="text-center"><div class="w-16 h-16 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center mx-auto mb-6"><i data-lucide="refresh-cw" class="w-8 h-8"></i></div><h3 class="text-xl font-black mb-3 text-zinc-800">战术重置</h3><p class="text-sm text-zinc-500 mb-8 font-bold leading-relaxed">确定弃置 ${this.state.selectedCardIndices.length} 张牌并换领 1 张新资源吗？</p><div class="flex gap-3"><button id="discard-cancel" onclick="window.App.pages.cardGame.cancelDiscard()" class="flex-1 py-4 bg-zinc-100 rounded-2xl font-black text-sm uppercase transition-colors">取消</button><button id="discard-confirm" onclick="window.App.pages.cardGame.confirmDiscard()" class="flex-1 py-4 bg-sky-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-sky-100 active:scale-95 transition-transform">确认</button></div></div></div></div>`;
+        return `<div class="fixed inset-0 z-[500] bg-black/70 flex items-center justify-center p-6 transform-gpu"><div class="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 border-4 border-zinc-100 animate-in zoom-in duration-200"><div class="text-center"><div class="w-16 h-16 bg-sky-50 text-sky-500 rounded-2xl flex items-center justify-center mx-auto mb-6"><i data-lucide="refresh-cw" class="w-8 h-8"></i></div><h3 class="text-xl font-black mb-3 text-zinc-800">执行重组</h3><p class="text-sm text-zinc-500 mb-8 font-bold leading-relaxed">确定弃置 ${this.state.selectedCardIndices.length} 张牌并补 1 张新牌吗？</p><div class="flex gap-3"><button id="discard-cancel" onclick="window.App.pages.cardGame.cancelDiscard()" class="flex-1 py-4 bg-zinc-100 rounded-2xl font-black text-sm uppercase transition-colors">取消</button><button id="discard-confirm" onclick="window.App.pages.cardGame.confirmDiscard()" class="flex-1 py-4 bg-sky-500 text-white rounded-2xl font-black text-sm shadow-lg shadow-sky-100 active:scale-95 transition-transform">确认</button></div></div></div></div>`;
     },
     
     renderTrainModal: function() {
