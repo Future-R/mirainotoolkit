@@ -58,6 +58,17 @@ window.DEFAULT_TOOLBOX_CONFIG = {
       "iconColor": "text-zinc-800"
     },
     {
+      "id": "video-rotate",
+      "name": "视频旋转器",
+      "desc": "上传本地视频后多次旋转再确认转换",
+      "path": "video-rotate",
+      "icon": "film",
+      "type": "internal",
+      "ribbon": "",
+      "labelClass": "bg-[#F59E0B]",
+      "iconColor": "text-white"
+    },
+    {
       "id": "card-game",
       "name": "阿不然打牌啰2",
       "desc": "那1在哪里？",

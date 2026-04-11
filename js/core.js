@@ -67,6 +67,7 @@ window.App.Router = {
         'dice': 'diceRoller',
         'text-map': 'textMapEditor',
         'jitter-text': 'jitterText',
+        'video-rotate': 'videoRotator',
         'card-game': 'cardGame'
     },
 
