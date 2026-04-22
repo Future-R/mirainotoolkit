@@ -28,7 +28,7 @@ window.App.pages.textMapEditor = {
                         </div>
                         <div>
                             <h2 class="text-lg font-black text-zinc-700 tracking-wider">文字地图编辑器</h2>
-                            <div class="text-[10px] text-zinc-400 font-bold">ERA 终端制图</div>
+                            <div class="text-[10px] text-zinc-400 font-bold">你也可以用来拼豆</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap justify-end">
