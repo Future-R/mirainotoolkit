@@ -88,6 +88,7 @@ window.App.pages.textMapEditor = {
                             <div class="grid grid-cols-2 gap-2 mb-3">
                                 <button id="btn-mode-copy" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">复制模式</button>
                                 <button id="btn-mode-paint" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">画笔模式</button>
+                                <button id="btn-mode-rect" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors col-span-2">矩形模式</button>
                             </div>
 
                             <div id="tool-mode-tip" class="mb-3 rounded-lg border border-teal-200 bg-white px-3 py-2 text-[10px] font-bold text-zinc-500 leading-5">
@@ -133,6 +134,7 @@ window.App.pages.textMapEditor = {
         const btnImport = document.getElementById('btn-import');
         const btnModeCopy = document.getElementById('btn-mode-copy');
         const btnModePaint = document.getElementById('btn-mode-paint');
+        const btnModeRect = document.getElementById('btn-mode-rect');
         const toolModeTip = document.getElementById('tool-mode-tip');
         const brushPreview = document.getElementById('brush-preview');
         const modal = document.getElementById('modal-import');
@@ -144,6 +146,7 @@ window.App.pages.textMapEditor = {
         let mapData = [];
         let editorMode = 'copy';
         let selectedBrush = '';
+        let rectStart = null;
         let copyAllResetTimer = null;
 
         const copyText = (text) => navigator.clipboard.writeText(text).catch(() => {});
@@ -151,13 +154,18 @@ window.App.pages.textMapEditor = {
 
         const syncModeUI = () => {
             const isCopyMode = editorMode === 'copy';
+            const isPaintMode = editorMode === 'paint';
+            const isRectMode = editorMode === 'rect';
 
             btnModeCopy.className = isCopyMode
                 ? 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-teal-500 border-teal-600 text-white'
                 : 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
-            btnModePaint.className = !isCopyMode
+            btnModePaint.className = isPaintMode
                 ? 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-teal-500 border-teal-600 text-white'
                 : 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
+            btnModeRect.className = isRectMode
+                ? 'px-3 py-2 rounded border text-xs font-bold transition-colors col-span-2 bg-teal-500 border-teal-600 text-white'
+                : 'px-3 py-2 rounded border text-xs font-bold transition-colors col-span-2 bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
 
             if (isCopyMode) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700';
@@ -166,11 +174,19 @@ window.App.pages.textMapEditor = {
             } else if (selectedBrush) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-teal-500 border border-teal-600 text-center font-mono text-sm font-black text-white';
                 brushPreview.textContent = selectedBrush;
-                toolModeTip.textContent = `当前画笔：${selectedBrush}。点击左侧地图任意位置，会直接替换该位置的字符。`;
+                if (isPaintMode) {
+                    toolModeTip.textContent = `当前画笔：${selectedBrush}。点击左侧地图任意位置，会直接替换该位置的字符。`;
+                } else if (rectStart) {
+                    toolModeTip.textContent = `当前矩形字符：${selectedBrush}。已选起点 (${rectStart.row}, ${rectStart.col})，请再点击一个终点来填满矩形。`;
+                } else {
+                    toolModeTip.textContent = `当前矩形字符：${selectedBrush}。先点击左侧地图选择矩形起点，再点击终点完成填充。`;
+                }
             } else {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-amber-50 border border-amber-200 text-center font-mono text-sm font-black text-amber-700';
                 brushPreview.textContent = '未选中';
-                toolModeTip.textContent = '画笔模式下，请先从字符工具箱选择一个字符，再点击左侧地图。';
+                toolModeTip.textContent = isRectMode
+                    ? '矩形模式下，请先从字符工具箱选择一个字符，再点击左侧地图选择起点。'
+                    : '画笔模式下，请先从字符工具箱选择一个字符，再点击左侧地图。';
             }
 
             charButtons.forEach((button) => {
@@ -196,6 +212,27 @@ window.App.pages.textMapEditor = {
                 rowInput.focus();
                 const nextCaret = Math.min(safeColIndex + 1, updatedRow.length);
                 rowInput.setSelectionRange(nextCaret, nextCaret);
+            }
+        };
+
+        const fillRectangle = (start, end) => {
+            if (!selectedBrush) return;
+
+            const minRow = Math.max(0, Math.min(start.row, end.row));
+            const maxRow = Math.min(this.config.rows - 1, Math.max(start.row, end.row));
+            const minCol = Math.max(0, Math.min(start.col, end.col));
+            const maxCol = Math.min(this.config.cols - 1, Math.max(start.col, end.col));
+
+            for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex += 1) {
+                const rowText = normalizeRow(mapData[rowIndex] || '');
+                const fillText = selectedBrush.repeat(maxCol - minCol + 1);
+                const updatedRow = `${rowText.slice(0, minCol)}${fillText}${rowText.slice(maxCol + 1)}`;
+                mapData[rowIndex] = updatedRow;
+
+                const rowInput = container.querySelector(`input[data-row="${rowIndex}"]`);
+                if (rowInput) {
+                    rowInput.value = updatedRow;
+                }
             }
         };
 
@@ -227,6 +264,7 @@ window.App.pages.textMapEditor = {
             }
 
             mapData = newData;
+            rectStart = null;
             renderGrid();
         };
 
@@ -265,10 +303,25 @@ window.App.pages.textMapEditor = {
                 });
 
                 input.addEventListener('click', (event) => {
-                    if (editorMode !== 'paint' || !selectedBrush) return;
                     const clickIndex = Math.max(0, Math.min(input.selectionStart ?? 0, this.config.cols - 1));
-                    applyBrush(rowIndex, clickIndex);
-                    event.preventDefault();
+
+                    if (editorMode === 'paint' && selectedBrush) {
+                        applyBrush(rowIndex, clickIndex);
+                        event.preventDefault();
+                        return;
+                    }
+
+                    if (editorMode === 'rect' && selectedBrush) {
+                        if (!rectStart) {
+                            rectStart = { row: rowIndex, col: clickIndex };
+                            syncModeUI();
+                        } else {
+                            fillRectangle(rectStart, { row: rowIndex, col: clickIndex });
+                            rectStart = null;
+                            syncModeUI();
+                        }
+                        event.preventDefault();
+                    }
                 });
 
                 const btnCopy = document.createElement('button');
@@ -300,11 +353,19 @@ window.App.pages.textMapEditor = {
 
         btnModeCopy.addEventListener('click', () => {
             editorMode = 'copy';
+            rectStart = null;
             syncModeUI();
         });
 
         btnModePaint.addEventListener('click', () => {
             editorMode = 'paint';
+            rectStart = null;
+            syncModeUI();
+        });
+
+        btnModeRect.addEventListener('click', () => {
+            editorMode = 'rect';
+            rectStart = null;
             syncModeUI();
         });
 
@@ -312,8 +373,9 @@ window.App.pages.textMapEditor = {
             button.addEventListener('click', () => {
                 const currentChar = button.dataset.char || button.innerText;
 
-                if (editorMode === 'paint') {
+                if (editorMode === 'paint' || editorMode === 'rect') {
                     selectedBrush = currentChar;
+                    if (editorMode === 'rect') rectStart = null;
                     syncModeUI();
                     return;
                 }
