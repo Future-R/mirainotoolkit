@@ -32,6 +32,12 @@ window.App.pages.textMapEditor = {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button id="btn-undo" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
+                            <i data-lucide="undo-2" class="w-3 h-3"></i> 撤销
+                        </button>
+                        <button id="btn-redo" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
+                            <i data-lucide="redo-2" class="w-3 h-3"></i> 重做
+                        </button>
                         <button id="btn-import" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
                             <i data-lucide="upload" class="w-3 h-3"></i> 导入
                         </button>
@@ -130,6 +136,8 @@ window.App.pages.textMapEditor = {
         const lblRows = document.getElementById('lbl-rows');
         const lblCols = document.getElementById('lbl-cols');
         const lblFont = document.getElementById('lbl-font');
+        const btnUndo = document.getElementById('btn-undo');
+        const btnRedo = document.getElementById('btn-redo');
         const btnCopyAll = document.getElementById('btn-copy-all');
         const btnImport = document.getElementById('btn-import');
         const btnModeCopy = document.getElementById('btn-mode-copy');
@@ -148,9 +156,78 @@ window.App.pages.textMapEditor = {
         let selectedBrush = '';
         let rectStart = null;
         let copyAllResetTimer = null;
+        let history = [];
+        let historyIndex = -1;
+        let isApplyingHistory = false;
 
         const copyText = (text) => navigator.clipboard.writeText(text).catch(() => {});
         const normalizeRow = (text = '') => text.padEnd(this.config.cols, blankCell).substring(0, this.config.cols);
+        const getMapState = () => ({
+            rows: this.config.rows,
+            cols: this.config.cols,
+            mapData: Array.from({ length: this.config.rows }, (_, index) => normalizeRow(mapData[index] || ''))
+        });
+
+        const applyMapState = (state) => {
+            this.config.rows = Math.min(Math.max(state.rows, 1), this.config.maxSize);
+            this.config.cols = Math.min(Math.max(state.cols, 1), this.config.maxSize);
+            mapData = Array.from({ length: this.config.rows }, (_, index) => normalizeRow(state.mapData[index] || ''));
+            inpRows.value = this.config.rows;
+            inpCols.value = this.config.cols;
+            lblRows.innerText = this.config.rows;
+            lblCols.innerText = this.config.cols;
+            rectStart = null;
+            renderGrid();
+        };
+
+        const syncHistoryButtons = () => {
+            const canUndo = historyIndex > 0;
+            const canRedo = historyIndex >= 0 && historyIndex < history.length - 1;
+
+            btnUndo.disabled = !canUndo;
+            btnRedo.disabled = !canRedo;
+
+            btnUndo.className = canUndo
+                ? 'px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm'
+                : 'px-3 py-2 bg-zinc-100 border border-zinc-200 rounded text-xs font-bold text-zinc-400 flex items-center gap-1 shadow-sm cursor-not-allowed';
+            btnRedo.className = canRedo
+                ? 'px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm'
+                : 'px-3 py-2 bg-zinc-100 border border-zinc-200 rounded text-xs font-bold text-zinc-400 flex items-center gap-1 shadow-sm cursor-not-allowed';
+        };
+
+        const commitHistory = () => {
+            if (isApplyingHistory) return;
+
+            const snapshot = getMapState();
+            const lastSnapshot = history[historyIndex];
+            if (lastSnapshot && JSON.stringify(lastSnapshot) === JSON.stringify(snapshot)) {
+                syncHistoryButtons();
+                return;
+            }
+
+            history = history.slice(0, historyIndex + 1);
+            history.push(snapshot);
+            historyIndex = history.length - 1;
+            syncHistoryButtons();
+        };
+
+        const undoHistory = () => {
+            if (historyIndex <= 0) return;
+            historyIndex -= 1;
+            isApplyingHistory = true;
+            applyMapState(history[historyIndex]);
+            isApplyingHistory = false;
+            syncHistoryButtons();
+        };
+
+        const redoHistory = () => {
+            if (historyIndex >= history.length - 1) return;
+            historyIndex += 1;
+            isApplyingHistory = true;
+            applyMapState(history[historyIndex]);
+            isApplyingHistory = false;
+            syncHistoryButtons();
+        };
 
         const syncModeUI = () => {
             const isCopyMode = editorMode === 'copy';
@@ -213,6 +290,8 @@ window.App.pages.textMapEditor = {
                 const nextCaret = Math.min(safeColIndex + 1, updatedRow.length);
                 rowInput.setSelectionRange(nextCaret, nextCaret);
             }
+
+            commitHistory();
         };
 
         const fillRectangle = (start, end) => {
@@ -234,6 +313,8 @@ window.App.pages.textMapEditor = {
                     rowInput.value = updatedRow;
                 }
             }
+
+            commitHistory();
         };
 
         const checkFonts = () => {
@@ -266,6 +347,7 @@ window.App.pages.textMapEditor = {
             mapData = newData;
             rectStart = null;
             renderGrid();
+            commitHistory();
         };
 
         const renderGrid = () => {
@@ -300,6 +382,12 @@ window.App.pages.textMapEditor = {
 
                 input.addEventListener('input', (event) => {
                     mapData[rowIndex] = event.target.value;
+                });
+
+                input.addEventListener('blur', () => {
+                    mapData[rowIndex] = normalizeRow(input.value);
+                    input.value = mapData[rowIndex];
+                    commitHistory();
                 });
 
                 input.addEventListener('click', (event) => {
@@ -397,6 +485,8 @@ window.App.pages.textMapEditor = {
 
         btnImport.onclick = () => modal.classList.remove('hidden');
         btnCancelImport.onclick = () => modal.classList.add('hidden');
+        btnUndo.addEventListener('click', undoHistory);
+        btnRedo.addEventListener('click', redoHistory);
 
         btnConfirmImport.onclick = () => {
             const text = txtImport.value;
@@ -416,8 +506,28 @@ window.App.pages.textMapEditor = {
             txtImport.value = '';
         };
 
+        document.addEventListener('keydown', (event) => {
+            const isModifierPressed = event.ctrlKey || event.metaKey;
+            if (!isModifierPressed) return;
+            if (event.key.toLowerCase() === 'z') {
+                event.preventDefault();
+                if (event.shiftKey) {
+                    redoHistory();
+                } else {
+                    undoHistory();
+                }
+                return;
+            }
+
+            if (event.key.toLowerCase() === 'y') {
+                event.preventDefault();
+                redoHistory();
+            }
+        });
+
         initMap(10, 10);
         syncModeUI();
+        syncHistoryButtons();
         if (window.lucide) window.lucide.createIcons();
     }
 };
