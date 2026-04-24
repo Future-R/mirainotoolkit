@@ -14,9 +14,56 @@ window.App.config = window.App.config || { tools: [] };
 window.App.pages = window.App.pages || {};
 window.App.activePage = null;
 
+const normalizeAppLocale = (locale) => {
+    const value = String(locale || '').trim().toLowerCase();
+    if (value.startsWith('ja')) return 'ja-JP';
+    return 'zh-CN';
+};
+
+window.App.getLocale = window.App.getLocale || function() {
+    try {
+        const storedLocale = localStorage.getItem('app_locale');
+        if (storedLocale) return normalizeAppLocale(storedLocale);
+    } catch (error) {
+        // Ignore storage access issues and fall back to document/browser locale.
+    }
+
+    const documentLocale = document.documentElement.lang;
+    if (documentLocale) return normalizeAppLocale(documentLocale);
+
+    const browserLocale = navigator.language || navigator.languages?.[0];
+    return normalizeAppLocale(browserLocale);
+};
+
+window.App.setLocale = window.App.setLocale || function(locale) {
+    const normalizedLocale = normalizeAppLocale(locale);
+
+    try {
+        localStorage.setItem('app_locale', normalizedLocale);
+    } catch (error) {
+        // Ignore storage access issues and still update the document language.
+    }
+
+    document.documentElement.lang = normalizedLocale;
+    return normalizedLocale;
+};
+
+const localizeToolboxConfig = (config) => {
+    if (!config || window.App.getLocale() !== 'ja-JP') return config;
+
+    const textMapTool = (config.tools || []).find((tool) => tool.id === 'text-map');
+    if (textMapTool) {
+        textMapTool.name = 'テキストマップエディタ';
+        textMapTool.desc = '必要性がわからないなら、たぶんまだ出番ではない';
+    }
+
+    return config;
+};
+
 // Define Init Function
 window.App.init = async function() {
     console.log("App initializing...");
+    document.documentElement.lang = window.App.getLocale();
     
     // 1. Load Configuration
     if (window.TOOLBOX_CONFIG) {
@@ -33,6 +80,8 @@ window.App.init = async function() {
             "tools": []
         };
     }
+
+    localizeToolboxConfig(window.App.config);
 
     // 2. Init Router
     if (window.App.Router) {
@@ -119,10 +168,14 @@ window.App.Layout = {
     render: function(currentPath) {
         const isHome = currentPath === '' || currentPath === '/';
         const isCardGame = currentPath === 'card-game';
+        const locale = (window.App && typeof window.App.getLocale === 'function') ? window.App.getLocale() : 'zh-CN';
+        const isJapanese = locale === 'ja-JP';
         const title = (window.App.config && window.App.config.name) ? window.App.config.name : "未来工具箱";
         // Check if CRT is DISABLED (if class no-crt is present)
         // If no-crt is present, isCrtOn is FALSE.
         const isCrtOn = !document.body.classList.contains('no-crt');
+        const localeButtonLabel = isJapanese ? '日' : '简';
+        const localeButtonTitle = isJapanese ? '日本語に切り替え中。クリックで简体中文へ' : '当前为简体中文。点击切换到日本語';
         
         const backButton = !isHome ? `
             <button onclick="window.App.Router.navigate('')"
@@ -176,7 +229,12 @@ window.App.Layout = {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3 flex-wrap justify-end">
+                        <button id="btn-toggle-locale" type="button" title="${localeButtonTitle}" class="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-white transition-all active:scale-95 group">
+                            <span class="inline-flex items-center justify-center min-w-6 h-6 rounded-full bg-orange-100 text-orange-600 text-xs font-black">${localeButtonLabel}</span>
+                            <span class="text-xs font-bold text-zinc-600 group-hover:text-zinc-900">简 / 日</span>
+                            <i data-lucide="languages" class="w-3 h-3 text-zinc-400"></i>
+                        </button>
                          <!-- CRT Toggle -->
                         <button id="btn-toggle-crt" class="flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-200 bg-zinc-50 hover:bg-white transition-all active:scale-95 group">
                             <div class="w-4 h-4 rounded-full border border-zinc-400 ${isCrtOn ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-zinc-200'} transition-colors"></div>
@@ -198,6 +256,15 @@ window.App.Layout = {
     },
     
     attachListeners: function() {
+        const localeBtn = document.getElementById('btn-toggle-locale');
+        if (localeBtn) {
+            localeBtn.addEventListener('click', () => {
+                const nextLocale = window.App.getLocale() === 'ja-JP' ? 'zh-CN' : 'ja-JP';
+                window.App.setLocale(nextLocale);
+                window.location.reload();
+            });
+        }
+
         const btn = document.getElementById('btn-toggle-crt');
         if (btn) {
             btn.addEventListener('click', () => {

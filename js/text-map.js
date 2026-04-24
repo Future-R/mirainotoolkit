@@ -2,10 +2,116 @@
 window.App = window.App || {};
 window.App.pages = window.App.pages || {};
 
+const TEXT_MAP_LOCALES = {
+    'zh-CN': {
+        title: '文字地图编辑器',
+        subtitle: '你也可以用来拼豆',
+        import: '导入',
+        undo: '撤销',
+        redo: '重做',
+        exportErb: '导出 ERB',
+        copyAll: '复制全图',
+        rows: '行',
+        cols: '列',
+        font: '字体',
+        cursor: '光标',
+        mapSettings: '地图参数',
+        width: '宽度',
+        height: '高度',
+        fontSelect: '字体选择',
+        fontDefault: '默认',
+        installRequired: '需安装',
+        installRequiredMarker: '需安装',
+        downloadFonts: '下载字体资源 >',
+        textStyle: '文本样式',
+        foreground: '前景色',
+        bold: '加粗',
+        underline: '下划线',
+        strike: '删除线',
+        charToolbox: '字符工具箱',
+        keyboard: '键盘',
+        unselected: '未选中',
+        modeText: '文本编辑',
+        modePaint: '画笔模式',
+        modeRect: '矩形填充',
+        tipText: '文本编辑模式支持一整行原生框选、复制、删除与富文本样式修改。',
+        tipPaintSelected: '当前画笔：{char}。点击或拖过左侧字符位，会按当前文本样式逐格上色。',
+        tipPaintIdle: '画笔模式下，请先从字符工具箱选择一个字符，再到左侧地图点击或拖动。',
+        tipRectSelected: '当前填充字符：{char}。拖拽左侧字符位即可按当前文本样式进行矩形填充。',
+        tipRectIdle: '矩形填充模式下，请先从字符工具箱选择一个字符，再到左侧拖拽填充。',
+        importMapText: '导入地图文本',
+        importPlaceholder: '在此处粘贴文本...',
+        cancel: '取消',
+        confirmImport: '确认导入',
+        copyRowTitle: '复制第 {row} 行',
+        erbHeader: '; 未来工具箱 之 文字地图编辑器 于 {timestamp} 生成',
+        copied: '已复制',
+        exported: '已导出'
+    },
+    'ja-JP': {
+        title: 'テキストマップエディタ',
+        subtitle: '豆マップ作りにも使えます',
+        import: 'インポート',
+        undo: '元に戻す',
+        redo: 'やり直す',
+        exportErb: 'ERB を書き出す',
+        copyAll: 'マップ全体をコピー',
+        rows: '行',
+        cols: '列',
+        font: 'フォント',
+        cursor: 'カーソル',
+        mapSettings: 'マップ設定',
+        width: '幅',
+        height: '高さ',
+        fontSelect: 'フォント選択',
+        fontDefault: '標準',
+        installRequired: '要インストール',
+        installRequiredMarker: '要インストール',
+        downloadFonts: 'フォント素材をダウンロード >',
+        textStyle: 'テキストスタイル',
+        foreground: '文字色',
+        bold: '太字',
+        underline: '下線',
+        strike: '取り消し線',
+        charToolbox: '文字ツールボックス',
+        keyboard: 'キーボード',
+        unselected: '未選択',
+        modeText: 'テキスト編集',
+        modePaint: 'ブラシモード',
+        modeRect: '矩形塗りつぶし',
+        tipText: 'テキスト編集モードでは、1 行単位のネイティブ選択、コピー、削除、リッチテキスト装飾の編集に対応します。',
+        tipPaintSelected: '現在のブラシ: {char}。左側の文字マスをクリックまたはドラッグすると、現在のテキストスタイルで 1 マスずつ塗れます。',
+        tipPaintIdle: 'ブラシモードでは、先に文字ツールボックスから文字を選び、そのあと左側のマップをクリックまたはドラッグしてください。',
+        tipRectSelected: '現在の塗りつぶし文字: {char}。左側の文字マスをドラッグすると、現在のテキストスタイルで矩形塗りつぶしできます。',
+        tipRectIdle: '矩形塗りつぶしモードでは、先に文字ツールボックスから文字を選び、そのあと左側をドラッグして塗りつぶしてください。',
+        importMapText: 'マップテキストをインポート',
+        importPlaceholder: 'ここにテキストを貼り付けてください...',
+        cancel: 'キャンセル',
+        confirmImport: 'インポートする',
+        copyRowTitle: '{row} 行目をコピー',
+        erbHeader: '; Mirai Toolkit テキストマップエディタで {timestamp} に生成',
+        copied: 'コピー済み',
+        exported: '書き出し済み'
+    }
+};
+
+const getTextMapLocale = () => {
+    if (window.App && typeof window.App.getLocale === 'function') {
+        return window.App.getLocale();
+    }
+
+    const locale = String(document.documentElement.lang || navigator.language || 'zh-CN').toLowerCase();
+    return locale.startsWith('ja') ? 'ja-JP' : 'zh-CN';
+};
+
+const getTextMapStrings = () => TEXT_MAP_LOCALES[getTextMapLocale()] || TEXT_MAP_LOCALES['zh-CN'];
+const formatTextMapString = (template, params = {}) => String(template || '').replace(/\{(\w+)\}/g, (_, key) => params[key] ?? '');
+
 window.App.pages.textMapEditor = {
     config: { rows: 10, cols: 10, font: "'MS Gothic', monospace", maxSize: 40 },
 
     render: function() {
+        const t = getTextMapStrings();
         const toolboxChars = [
             '┌', '┬', '┐', '┏', '┳', '┓', '╔', '╦', '╗', '╭', '─', '╮',
             '├', '┼', '┤', '┣', '╋', '┫', '╠', '╬', '╣', '│', '╳', '┃',
@@ -27,25 +133,25 @@ window.App.pages.textMapEditor = {
                             <i data-lucide="map" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <h2 class="text-lg font-black text-zinc-700 tracking-wider">文字地图编辑器</h2>
-                            <div class="text-[10px] text-zinc-400 font-bold">你也可以用来拼豆</div>
+                            <h2 class="text-lg font-black text-zinc-700 tracking-wider">${t.title}</h2>
+                            <div class="text-[10px] text-zinc-400 font-bold">${t.subtitle}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap justify-end">
                         <button id="btn-import" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
-                            <i data-lucide="upload" class="w-3 h-3"></i> 导入
+                            <i data-lucide="upload" class="w-3 h-3"></i> ${t.import}
                         </button>
                         <button id="btn-undo" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
-                            <i data-lucide="undo-2" class="w-3 h-3"></i> 撤销
+                            <i data-lucide="undo-2" class="w-3 h-3"></i> ${t.undo}
                         </button>
                         <button id="btn-redo" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
-                            <i data-lucide="redo-2" class="w-3 h-3"></i> 重做
+                            <i data-lucide="redo-2" class="w-3 h-3"></i> ${t.redo}
                         </button>
                         <button id="btn-export-erb" type="button" class="px-3 py-2 bg-white border border-zinc-300 rounded text-xs font-bold text-zinc-600 hover:bg-zinc-50 flex items-center gap-1 shadow-sm">
-                            <i data-lucide="file-down" class="w-3 h-3"></i> 导出 ERB
+                            <i data-lucide="file-down" class="w-3 h-3"></i> ${t.exportErb}
                         </button>
                         <button id="btn-copy-all" type="button" class="px-3 py-2 bg-teal-500 border border-teal-600 rounded text-xs font-bold text-white hover:bg-teal-600 flex items-center gap-1 shadow-sm">
-                            <i data-lucide="copy" class="w-3 h-3"></i> 复制全图
+                            <i data-lucide="copy" class="w-3 h-3"></i> ${t.copyAll}
                         </button>
                     </div>
                 </div>
@@ -54,10 +160,10 @@ window.App.pages.textMapEditor = {
                     <div class="flex-1 min-w-0">
                         <div class="device-screen bg-black min-h-[700px] p-6 overflow-auto relative">
                             <div class="flex flex-wrap justify-between gap-3 text-[10px] font-mono text-teal-700 mb-3 select-none">
-                                <span>行: <span id="lbl-rows">10</span></span>
-                                <span>列: <span id="lbl-cols">10</span></span>
-                                <span>字体: <span id="lbl-font">MS Gothic</span></span>
-                                <span>光标: <span id="lbl-cursor">1, 1</span></span>
+                                <span>${t.rows}: <span id="lbl-rows">10</span></span>
+                                <span>${t.cols}: <span id="lbl-cols">10</span></span>
+                                <span>${t.font}: <span id="lbl-font">MS Gothic</span></span>
+                                <span>${t.cursor}: <span id="lbl-cursor">1, 1</span></span>
                             </div>
                             <div id="map-container" class="flex flex-col gap-0 w-max min-w-full border border-zinc-800 bg-black rounded p-2">
                                 <!-- Rows injected via JS -->
@@ -67,36 +173,36 @@ window.App.pages.textMapEditor = {
 
                     <div class="w-full lg:w-96 flex flex-col gap-6">
                         <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200">
-                            <h3 class="text-xs font-bold text-zinc-500 tracking-widest mb-3 uppercase">地图参数</h3>
+                            <h3 class="text-xs font-bold text-zinc-500 tracking-widest mb-3 uppercase">${t.mapSettings}</h3>
                             <div class="grid grid-cols-2 gap-3 mb-4">
                                 <div>
-                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">宽度 (W)</label>
+                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.width} (W)</label>
                                     <input id="inp-cols" type="number" min="1" max="40" value="10" class="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-sm font-mono text-center">
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">高度 (H)</label>
+                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.height} (H)</label>
                                     <input id="inp-rows" type="number" min="1" max="40" value="10" class="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-sm font-mono text-center">
                                 </div>
                             </div>
                             <div>
-                                <label class="text-[10px] font-bold text-zinc-400 block mb-1">字体选择</label>
+                                <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.fontSelect}</label>
                                 <select id="sel-font" class="w-full bg-white border border-zinc-300 rounded px-2 py-1 text-xs font-bold text-zinc-700">
-                                    <option value="'MS Gothic', monospace">MS Gothic (era 默认)</option>
-                                    <option value="'ERA MONO SC', 'MS Gothic', monospace">ERA MONO SC (需安装)</option>
-                                    <option value="'EraPixel', 'MS Gothic', monospace">EraPixel (需安装)</option>
+                                    <option value="'MS Gothic', monospace">MS Gothic (era ${t.fontDefault})</option>
+                                    <option value="'ERA MONO SC', 'MS Gothic', monospace">ERA MONO SC (${t.installRequired})</option>
+                                    <option value="'EraPixel', 'MS Gothic', monospace">EraPixel (${t.installRequired})</option>
                                 </select>
-                                <a href="https://gitgud.io/era-games-zh/meta/eraFonts" target="_blank" rel="noopener noreferrer" class="block text-right text-[10px] text-teal-600 font-bold mt-1 hover:underline">下载字体资源 ></a>
+                                <a href="https://gitgud.io/era-games-zh/meta/eraFonts" target="_blank" rel="noopener noreferrer" class="block text-right text-[10px] text-teal-600 font-bold mt-1 hover:underline">${t.downloadFonts}</a>
                             </div>
                         </div>
 
                         <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200">
                             <div class="flex items-center justify-between gap-3 mb-3">
-                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">文本样式</h3>
+                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">${t.textStyle}</h3>
                                 <div id="style-sample" class="min-w-20 px-3 py-1 rounded bg-black border border-zinc-700 text-center font-mono text-sm font-black text-white">Aa</div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="text-[10px] font-bold text-zinc-400 block mb-1">前景色</label>
+                                <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.foreground}</label>
                                 <div class="flex items-center gap-2">
                                     <input id="inp-text-color" type="color" value="#ffffff" class="h-9 w-14 rounded border border-zinc-300 bg-white p-1 cursor-pointer">
                                     <div id="lbl-text-color" class="flex-1 px-3 py-2 rounded bg-white border border-zinc-300 text-xs font-mono font-bold text-zinc-700">#ffffff</div>
@@ -104,26 +210,26 @@ window.App.pages.textMapEditor = {
                             </div>
 
                             <div class="grid grid-cols-3 gap-2">
-                                <button id="btn-style-bold" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">加粗</button>
-                                <button id="btn-style-underline" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">下划线</button>
-                                <button id="btn-style-strike" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">删除线</button>
+                                <button id="btn-style-bold" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.bold}</button>
+                                <button id="btn-style-underline" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.underline}</button>
+                                <button id="btn-style-strike" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.strike}</button>
                             </div>
                         </div>
 
                         <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200 flex-1">
                             <div class="flex items-center justify-between gap-3 mb-3">
-                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">字符工具箱</h3>
-                                <div id="brush-preview" class="min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700">键盘</div>
+                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">${t.charToolbox}</h3>
+                                <div id="brush-preview" class="min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700">${t.keyboard}</div>
                             </div>
 
                             <div class="grid grid-cols-3 gap-2 mb-3">
-                                <button id="btn-mode-text" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">文本编辑</button>
-                                <button id="btn-mode-paint" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">画笔模式</button>
-                                <button id="btn-mode-rect" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">矩形填充</button>
+                                <button id="btn-mode-text" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modeText}</button>
+                                <button id="btn-mode-paint" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modePaint}</button>
+                                <button id="btn-mode-rect" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modeRect}</button>
                             </div>
 
                             <div id="tool-mode-tip" class="mb-3 rounded-lg border border-teal-200 bg-white px-3 py-2 text-[10px] font-bold text-zinc-500 leading-5">
-                                文本编辑模式支持一整行原生框选、复制、删除与富文本样式修改。
+                                ${t.tipText}
                             </div>
 
                             <div class="grid grid-cols-12 gap-px bg-zinc-200 border border-zinc-200 rounded overflow-hidden">
@@ -140,11 +246,11 @@ window.App.pages.textMapEditor = {
 
             <div id="modal-import" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg border-4 border-zinc-200">
-                    <h3 class="text-lg font-black text-zinc-800 mb-4">导入地图文本</h3>
-                    <textarea id="import-text" class="w-full h-48 bg-zinc-50 border border-zinc-300 rounded-lg p-3 font-mono text-xs mb-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="在此处粘贴文本..."></textarea>
+                    <h3 class="text-lg font-black text-zinc-800 mb-4">${t.importMapText}</h3>
+                    <textarea id="import-text" class="w-full h-48 bg-zinc-50 border border-zinc-300 rounded-lg p-3 font-mono text-xs mb-4 focus:ring-2 focus:ring-teal-500 outline-none" placeholder="${t.importPlaceholder}"></textarea>
                     <div class="flex justify-end gap-3">
-                        <button id="btn-cancel-import" type="button" class="px-4 py-2 text-zinc-500 font-bold hover:bg-zinc-100 rounded">取消</button>
-                        <button id="btn-confirm-import" type="button" class="px-4 py-2 bg-teal-500 text-white font-bold rounded hover:bg-teal-600">确认导入</button>
+                        <button id="btn-cancel-import" type="button" class="px-4 py-2 text-zinc-500 font-bold hover:bg-zinc-100 rounded">${t.cancel}</button>
+                        <button id="btn-confirm-import" type="button" class="px-4 py-2 bg-teal-500 text-white font-bold rounded hover:bg-teal-600">${t.confirmImport}</button>
                     </div>
                 </div>
             </div>
@@ -154,6 +260,7 @@ window.App.pages.textMapEditor = {
 
     mount: function() {
         if (this._cleanup) this._cleanup();
+        const t = getTextMapStrings();
 
         const blankCell = 'Ｘ';
         const defaultColor = '#ffffff';
@@ -573,24 +680,24 @@ window.App.pages.textMapEditor = {
 
             if (isTextMode) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700';
-                brushPreview.textContent = selectedBrush || '键盘';
-                toolModeTip.textContent = '文本编辑模式支持一整行原生框选、复制、删除与富文本样式修改。';
+                brushPreview.textContent = selectedBrush || t.keyboard;
+                toolModeTip.textContent = t.tipText;
             } else if (isPaintMode && selectedBrush) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-teal-500 border border-teal-600 text-center font-mono text-sm font-black text-white';
                 brushPreview.textContent = selectedBrush;
-                toolModeTip.textContent = `当前画笔：${selectedBrush}。点击或拖过左侧字符位，会按当前文本样式逐格上色。`;
+                toolModeTip.textContent = formatTextMapString(t.tipPaintSelected, { char: selectedBrush });
             } else if (isPaintMode) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-amber-50 border border-amber-200 text-center font-mono text-sm font-black text-amber-700';
-                brushPreview.textContent = '未选中';
-                toolModeTip.textContent = '画笔模式下，请先从字符工具箱选择一个字符，再到左侧地图点击或拖动。';
+                brushPreview.textContent = t.unselected;
+                toolModeTip.textContent = t.tipPaintIdle;
             } else if (selectedBrush) {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-teal-500 border border-teal-600 text-center font-mono text-sm font-black text-white';
                 brushPreview.textContent = selectedBrush;
-                toolModeTip.textContent = `当前填充字符：${selectedBrush}。拖拽左侧字符位即可按当前文本样式进行矩形填充。`;
+                toolModeTip.textContent = formatTextMapString(t.tipRectSelected, { char: selectedBrush });
             } else {
                 brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-amber-50 border border-amber-200 text-center font-mono text-sm font-black text-amber-700';
-                brushPreview.textContent = '未选中';
-                toolModeTip.textContent = '矩形填充模式下，请先从字符工具箱选择一个字符，再到左侧拖拽填充。';
+                brushPreview.textContent = t.unselected;
+                toolModeTip.textContent = t.tipRectIdle;
             }
 
             charButtons.forEach((button) => {
@@ -701,7 +808,7 @@ window.App.pages.textMapEditor = {
                             type="button"
                             class="opacity-0 group-hover:opacity-100 text-teal-600 hover:text-teal-400 shrink-0 transition-opacity"
                             data-copy-row="${rowIndex}"
-                            title="复制第 ${rowIndex + 1} 行"
+                            title="${formatTextMapString(t.copyRowTitle, { row: rowIndex + 1 })}"
                         >
                             <i data-lucide="copy" class="w-3 h-3"></i>
                         </button>
@@ -900,7 +1007,7 @@ window.App.pages.textMapEditor = {
                 return segment;
             }).join('');
 
-            return `HTML_PRINT "<nobr>${html}</nobr>"`;
+            return `<nobr>${html}</nobr>`;
         };
         const buildErbScript = () => {
             const now = new Date();
@@ -910,10 +1017,22 @@ window.App.pages.textMapEditor = {
                 String(now.getDate()).padStart(2, '0')
             ].join('-');
 
-            return [
-                `; 未来工具箱 之 文字地图编辑器 于 ${timestamp} 生成`,
-                ...mapData.map((rowCells) => buildErbLine(rowCells))
-            ].join('\n');
+            const erbLines = [
+                formatTextMapString(t.erbHeader, { timestamp }),
+                '#DIMS DYNAMIC htmlString',
+                'htmlString \'= ""'
+            ];
+
+            mapData.forEach((rowCells, rowIndex) => {
+                erbLines.push(`htmlString += "${buildErbLine(rowCells)}"`);
+                if (rowIndex < mapData.length - 1) {
+                    erbLines.push('htmlString += "<br>"');
+                }
+            });
+
+            erbLines.push('HTML_PRINT htmlString');
+
+            return erbLines.join('\n');
         };
         const downloadFile = (filename, content) => {
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -1003,7 +1122,7 @@ window.App.pages.textMapEditor = {
         const checkFonts = () => {
             const options = selFont.querySelectorAll('option');
             options.forEach((option) => {
-                if (!option.innerText.includes('需安装')) return;
+                if (!option.innerText.includes(t.installRequiredMarker)) return;
 
                 const fontName = option.value.split(',')[0].replace(/['"]/g, '');
                 if (!document.fonts.check(`12px ${fontName}`)) {
@@ -1136,11 +1255,11 @@ window.App.pages.textMapEditor = {
             if (editorMode === 'text') syncAllRowsFromDom();
 
             copyText(getPlainTextMap());
-            btnCopyAll.textContent = '已复制';
+            btnCopyAll.textContent = t.copied;
 
             if (copyAllResetTimer) clearTimeout(copyAllResetTimer);
             copyAllResetTimer = setTimeout(() => {
-                btnCopyAll.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i> 复制全图';
+                btnCopyAll.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> ${t.copyAll}`;
                 if (window.lucide) window.lucide.createIcons();
             }, 2000);
         });
@@ -1151,11 +1270,11 @@ window.App.pages.textMapEditor = {
             const now = new Date();
             const filename = `text-map-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.erb`;
             downloadFile(filename, buildErbScript());
-            btnExportErb.textContent = '已导出';
+            btnExportErb.textContent = t.exported;
 
             if (exportResetTimer) clearTimeout(exportResetTimer);
             exportResetTimer = setTimeout(() => {
-                btnExportErb.innerHTML = '<i data-lucide="file-down" class="w-3 h-3"></i> 导出 ERB';
+                btnExportErb.innerHTML = `<i data-lucide="file-down" class="w-3 h-3"></i> ${t.exportErb}`;
                 if (window.lucide) window.lucide.createIcons();
             }, 2000);
         });
