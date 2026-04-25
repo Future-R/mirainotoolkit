@@ -126,7 +126,7 @@ window.DEFAULT_TOOLBOX_CONFIG = {
     {
       "id": "guji-search",
       "name": "古籍搜索",
-      "desc": "识典古籍",
+      "desc": "有了它，你也是出口成章的国学大师",
       "path": "https://www.shidianguji.com/",
       "icon": "scroll",
       "type": "external",
