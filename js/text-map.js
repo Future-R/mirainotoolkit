@@ -25,6 +25,7 @@ const TEXT_MAP_LOCALES = {
         downloadFonts: '下载字体资源 >',
         textStyle: '文本样式',
         foreground: '前景色',
+        selectedChar: '选中字符',
         bold: '加粗',
         underline: '下划线',
         strike: '删除线',
@@ -32,11 +33,8 @@ const TEXT_MAP_LOCALES = {
         keyboard: '键盘',
         unselected: '未选中',
         modeText: '文本编辑',
-        modePaint: '画笔模式',
         modeRect: '矩形填充',
-        tipText: '文本编辑模式支持一整行原生框选、复制、删除与富文本样式修改。',
-        tipPaintSelected: '当前画笔：{char}。点击或拖过左侧字符位，会按当前文本样式逐格上色。',
-        tipPaintIdle: '画笔模式下，请先从字符工具箱选择一个字符，再到左侧地图点击或拖动。',
+        tipText: '文本编辑模式支持一整行原生框选、复制、删除与富文本样式修改；点击下方字符会直接复制。',
         tipRectSelected: '当前填充字符：{char}。拖拽左侧字符位即可按当前文本样式进行矩形填充。',
         tipRectIdle: '矩形填充模式下，请先从字符工具箱选择一个字符，再到左侧拖拽填充。',
         importMapText: '导入地图文本',
@@ -50,7 +48,7 @@ const TEXT_MAP_LOCALES = {
     },
     'ja-JP': {
         title: 'テキストマップエディタ',
-        subtitle: '豆マップ作りにも使えます',
+        subtitle: 'ピクセル画を描くのにも使える',
         import: 'インポート',
         undo: '元に戻す',
         redo: 'やり直す',
@@ -70,6 +68,7 @@ const TEXT_MAP_LOCALES = {
         downloadFonts: 'フォント素材をダウンロード >',
         textStyle: 'テキストスタイル',
         foreground: '文字色',
+        selectedChar: '選択文字',
         bold: '太字',
         underline: '下線',
         strike: '取り消し線',
@@ -77,11 +76,8 @@ const TEXT_MAP_LOCALES = {
         keyboard: 'キーボード',
         unselected: '未選択',
         modeText: 'テキスト編集',
-        modePaint: 'ブラシモード',
         modeRect: '矩形塗りつぶし',
-        tipText: 'テキスト編集モードでは、1 行単位のネイティブ選択、コピー、削除、リッチテキスト装飾の編集に対応します。',
-        tipPaintSelected: '現在のブラシ: {char}。左側の文字マスをクリックまたはドラッグすると、現在のテキストスタイルで 1 マスずつ塗れます。',
-        tipPaintIdle: 'ブラシモードでは、先に文字ツールボックスから文字を選び、そのあと左側のマップをクリックまたはドラッグしてください。',
+        tipText: 'テキスト編集モードでは、1 行単位のネイティブ選択、コピー、削除、リッチテキスト装飾の編集に対応し、下の文字クリックはコピーになります。',
         tipRectSelected: '現在の塗りつぶし文字: {char}。左側の文字マスをドラッグすると、現在のテキストスタイルで矩形塗りつぶしできます。',
         tipRectIdle: '矩形塗りつぶしモードでは、先に文字ツールボックスから文字を選び、そのあと左側をドラッグして塗りつぶしてください。',
         importMapText: 'マップテキストをインポート',
@@ -195,36 +191,32 @@ window.App.pages.textMapEditor = {
                             </div>
                         </div>
 
-                        <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200">
+                        <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200 flex-1">
                             <div class="flex items-center justify-between gap-3 mb-3">
-                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">${t.textStyle}</h3>
-                                <div id="style-sample" class="min-w-20 px-3 py-1 rounded bg-black border border-zinc-700 text-center font-mono text-sm font-black text-white">Aa</div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.foreground}</label>
-                                <div class="flex items-center gap-2">
-                                    <input id="inp-text-color" type="color" value="#ffffff" class="h-9 w-14 rounded border border-zinc-300 bg-white p-1 cursor-pointer">
-                                    <div id="lbl-text-color" class="flex-1 px-3 py-2 rounded bg-white border border-zinc-300 text-xs font-mono font-bold text-zinc-700">#ffffff</div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">${t.textStyle}</h3>
+                                    <span class="text-[10px] font-bold text-zinc-400 tracking-widest uppercase">${t.charToolbox}</span>
                                 </div>
+                                <div id="style-sample" class="min-w-12 h-9 px-3 rounded bg-black border border-zinc-700 text-center font-mono text-sm font-black text-white inline-flex items-center justify-center">Aa</div>
                             </div>
 
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="flex flex-wrap items-end gap-2 mb-3">
+                                <div class="w-24 shrink-0">
+                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.selectedChar}</label>
+                                    <input id="inp-selected-char" type="text" inputmode="text" autocomplete="off" spellcheck="false" maxlength="2" class="w-full h-9 px-2 rounded bg-white border border-zinc-300 text-sm font-mono font-black text-center text-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500" value="">
+                                </div>
+                                <div class="shrink-0">
+                                    <label class="text-[10px] font-bold text-zinc-400 block mb-1">${t.foreground}</label>
+                                    <input id="inp-text-color" type="color" value="#ffffff" class="h-9 w-14 rounded border border-zinc-300 bg-white p-1 cursor-pointer">
+                                </div>
+                                <div id="lbl-text-color" class="min-w-28 h-9 px-3 rounded bg-white border border-zinc-300 text-xs font-mono font-bold text-zinc-700 inline-flex items-center justify-center">#ffffff</div>
                                 <button id="btn-style-bold" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.bold}</button>
                                 <button id="btn-style-underline" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.underline}</button>
                                 <button id="btn-style-strike" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.strike}</button>
                             </div>
-                        </div>
 
-                        <div class="bg-zinc-100 p-4 rounded-lg border border-zinc-200 flex-1">
-                            <div class="flex items-center justify-between gap-3 mb-3">
-                                <h3 class="text-xs font-bold text-zinc-500 tracking-widest uppercase">${t.charToolbox}</h3>
-                                <div id="brush-preview" class="min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700">${t.keyboard}</div>
-                            </div>
-
-                            <div class="grid grid-cols-3 gap-2 mb-3">
+                            <div class="grid grid-cols-2 gap-2 mb-3">
                                 <button id="btn-mode-text" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modeText}</button>
-                                <button id="btn-mode-paint" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modePaint}</button>
                                 <button id="btn-mode-rect" type="button" class="px-3 py-2 rounded border text-xs font-bold transition-colors">${t.modeRect}</button>
                             </div>
 
@@ -278,11 +270,10 @@ window.App.pages.textMapEditor = {
         const btnExportErb = document.getElementById('btn-export-erb');
         const btnImport = document.getElementById('btn-import');
         const btnModeText = document.getElementById('btn-mode-text');
-        const btnModePaint = document.getElementById('btn-mode-paint');
         const btnModeRect = document.getElementById('btn-mode-rect');
         const toolModeTip = document.getElementById('tool-mode-tip');
-        const brushPreview = document.getElementById('brush-preview');
         const styleSample = document.getElementById('style-sample');
+        const inpSelectedChar = document.getElementById('inp-selected-char');
         const inpTextColor = document.getElementById('inp-text-color');
         const lblTextColor = document.getElementById('lbl-text-color');
         const btnStyleBold = document.getElementById('btn-style-bold');
@@ -300,7 +291,6 @@ window.App.pages.textMapEditor = {
         let activeRow = 0;
         let selectionState = { row: 0, start: 0, end: 0 };
         let currentTextStyle = { color: defaultColor, bold: false, underline: false, strike: false };
-        let paintStroke = null;
         let rectDrag = null;
         let copyAllResetTimer = null;
         let exportResetTimer = null;
@@ -317,10 +307,11 @@ window.App.pages.textMapEditor = {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-        const normalizeChar = (value) => {
-            const chars = Array.from(String(value ?? ''));
-            return chars.length > 0 ? chars[0] : blankCell;
+        const normalizeSelectedChar = (value) => {
+            const chars = Array.from(String(value ?? '').replace(/\r?\n/g, '').replace(/\u200b/g, ''));
+            return chars.length > 0 ? chars[0] : '';
         };
+        const normalizeChar = (value) => normalizeSelectedChar(value) || blankCell;
         const normalizeColor = (value) => {
             if (!value) return defaultColor;
 
@@ -381,7 +372,6 @@ window.App.pages.textMapEditor = {
         });
         const getPlainTextRow = (rowIndex) => (mapData[rowIndex] || []).map((cell) => cell.char).join('');
         const getPlainTextMap = () => mapData.map((_, rowIndex) => getPlainTextRow(rowIndex)).join('\n');
-        const copyText = (text) => navigator.clipboard.writeText(text).catch(() => {});
         const isFullWidthCodePoint = (codePoint) => (
             codePoint >= 0x1100 && (
                 codePoint <= 0x115f ||
@@ -541,7 +531,6 @@ window.App.pages.textMapEditor = {
                 end: selectionState.end
             });
             rectDrag = null;
-            paintStroke = null;
 
             renderRows({ focus: editorMode === 'text' });
             updateCursorLabel();
@@ -601,6 +590,7 @@ window.App.pages.textMapEditor = {
             lblTextColor.style.color = getReadableTextColor(currentTextStyle.color);
             lblTextColor.style.backgroundColor = currentTextStyle.color;
             lblTextColor.style.borderColor = currentTextStyle.color;
+            styleSample.textContent = selectedBrush || 'Aa';
             styleSample.style.color = currentTextStyle.color;
             styleSample.style.fontWeight = currentTextStyle.bold ? '700' : '400';
             styleSample.style.textDecoration = textDecoration;
@@ -663,51 +653,39 @@ window.App.pages.textMapEditor = {
 
             updateStyleSample();
         };
+        const setSelectedBrush = (value) => {
+            selectedBrush = normalizeSelectedChar(value);
+            inpSelectedChar.value = selectedBrush;
+            updateStyleSample();
+            syncModeUI();
+        };
         const syncModeUI = () => {
             const isTextMode = editorMode === 'text';
-            const isPaintMode = editorMode === 'paint';
             const isRectMode = editorMode === 'rect';
 
             btnModeText.className = isTextMode
-                ? 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-teal-500 border-teal-600 text-white'
-                : 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
-            btnModePaint.className = isPaintMode
                 ? 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-teal-500 border-teal-600 text-white'
                 : 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
             btnModeRect.className = isRectMode
                 ? 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-teal-500 border-teal-600 text-white'
                 : 'px-3 py-2 rounded border text-xs font-bold transition-colors bg-white border-zinc-300 text-zinc-600 hover:bg-zinc-50';
 
-            if (isTextMode) {
-                brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-white border border-zinc-300 text-center font-mono text-sm font-black text-zinc-700';
-                brushPreview.textContent = selectedBrush || t.keyboard;
-                toolModeTip.textContent = t.tipText;
-            } else if (isPaintMode && selectedBrush) {
-                brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-teal-500 border border-teal-600 text-center font-mono text-sm font-black text-white';
-                brushPreview.textContent = selectedBrush;
-                toolModeTip.textContent = formatTextMapString(t.tipPaintSelected, { char: selectedBrush });
-            } else if (isPaintMode) {
-                brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-amber-50 border border-amber-200 text-center font-mono text-sm font-black text-amber-700';
-                brushPreview.textContent = t.unselected;
-                toolModeTip.textContent = t.tipPaintIdle;
-            } else if (selectedBrush) {
-                brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-teal-500 border border-teal-600 text-center font-mono text-sm font-black text-white';
-                brushPreview.textContent = selectedBrush;
-                toolModeTip.textContent = formatTextMapString(t.tipRectSelected, { char: selectedBrush });
-            } else {
-                brushPreview.className = 'min-w-16 px-3 py-1 rounded bg-amber-50 border border-amber-200 text-center font-mono text-sm font-black text-amber-700';
-                brushPreview.textContent = t.unselected;
-                toolModeTip.textContent = t.tipRectIdle;
-            }
+            inpSelectedChar.className = selectedBrush
+                ? 'w-full h-9 px-2 rounded bg-teal-50 border border-teal-400 text-sm font-mono font-black text-center text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500'
+                : 'w-full h-9 px-2 rounded bg-white border border-zinc-300 text-sm font-mono font-black text-center text-zinc-700 focus:outline-none focus:ring-2 focus:ring-teal-500';
+
+            toolModeTip.textContent = isTextMode
+                ? t.tipText
+                : (selectedBrush ? formatTextMapString(t.tipRectSelected, { char: selectedBrush }) : t.tipRectIdle);
 
             charButtons.forEach((button) => {
-                const isSelected = (isPaintMode || isRectMode) && selectedBrush && button.dataset.char === selectedBrush;
+                const isSelected = selectedBrush && button.dataset.char === selectedBrush;
                 button.className = isSelected
                     ? 'btn-char w-full h-6 bg-teal-500 text-white ring-2 ring-teal-200 font-mono text-lg leading-none flex items-center justify-center transition-colors'
                     : 'btn-char w-full h-6 bg-white hover:bg-teal-500 hover:text-white font-mono text-lg leading-none flex items-center justify-center transition-colors';
             });
         };
-        const buildRunMarkup = (text, style) => {
+        const buildRunMarkup = (text, style, options = {}) => {
             const styles = [
                 `color:${style.color}`,
                 `font-weight:${style.bold ? '700' : '400'}`,
@@ -717,9 +695,13 @@ window.App.pages.textMapEditor = {
                 ].filter(Boolean).join(' ') || 'none'}`
             ].join(';');
 
-            return `<span style="${styles}">${escapeHtml(text)}</span>`;
+            const content = options.preserveSpaces
+                ? escapeHtml(text).replace(/ /g, '&nbsp;')
+                : escapeHtml(text);
+
+            return `<span style="${styles}">${content}</span>`;
         };
-        const buildRichRowHtml = (rowCells) => {
+        const buildRichRowHtml = (rowCells, options = {}) => {
             const runs = [];
 
             rowCells.forEach((cell) => {
@@ -738,7 +720,41 @@ window.App.pages.textMapEditor = {
                 }
             });
 
-            return runs.map((run) => buildRunMarkup(run.text, run.style)).join('');
+            return runs.map((run) => buildRunMarkup(run.text, run.style, options)).join('');
+        };
+        const buildRichClipboardPayloadFromCells = (cells) => ({
+            text: cells.map((cell) => cell.char).join(''),
+            html: buildRichRowHtml(cells, { preserveSpaces: true })
+        });
+        const buildRichClipboardPayloadForRow = (rowIndex) => buildRichClipboardPayloadFromCells(mapData[rowIndex] || []);
+        const buildRichClipboardPayloadForSelection = (state = selectionState) => {
+            const normalized = normalizeSelection(state);
+            const start = Math.min(normalized.start, normalized.end);
+            const end = Math.max(normalized.start, normalized.end);
+            if (start === end) return null;
+
+            const rowCells = (mapData[normalized.row] || []).slice(start, end);
+            return buildRichClipboardPayloadFromCells(rowCells);
+        };
+        const buildRichClipboardPayloadForMap = () => ({
+            text: getPlainTextMap(),
+            html: mapData.map((rowCells) => buildRichRowHtml(rowCells, { preserveSpaces: true })).join('<br>')
+        });
+        const copyClipboardPayload = ({ text = '', html = '' }) => {
+            if (!text && !html) return Promise.resolve(false);
+
+            if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined' && html) {
+                return navigator.clipboard.write([
+                    new ClipboardItem({
+                        'text/plain': new Blob([text], { type: 'text/plain' }),
+                        'text/html': new Blob([html], { type: 'text/html' })
+                    })
+                ]).then(() => true).catch(() => (
+                    navigator.clipboard.writeText(text).then(() => true).catch(() => false)
+                ));
+            }
+
+            return navigator.clipboard.writeText(text).then(() => true).catch(() => false);
         };
         const buildRectCellMarkup = (cell, rowIndex, colIndex) => {
             const isPreview = Boolean(
@@ -824,14 +840,14 @@ window.App.pages.textMapEditor = {
                 refreshRowFocusState();
             }
         };
-        const parseRowDom = (rowEl) => {
+        const parseStyledCellsFromDom = (rootNode, maxCells = this.config.cols) => {
             const cells = [];
             const walk = (node, inheritedStyle) => {
-                if (cells.length >= this.config.cols) return;
+                if (cells.length >= maxCells) return;
 
                 if (node.nodeType === Node.TEXT_NODE) {
-                    Array.from((node.nodeValue || '').replace(/\r?\n/g, '').replace(/\u200b/g, '')).forEach((char) => {
-                        if (cells.length < this.config.cols) cells.push(createCell(char, inheritedStyle));
+                    Array.from((node.nodeValue || '').replace(/\r?\n/g, '').replace(/\u200b/g, '').replace(/\u00a0/g, ' ')).forEach((char) => {
+                        if (cells.length < maxCells) cells.push(createCell(char, inheritedStyle));
                     });
                     return;
                 }
@@ -840,6 +856,7 @@ window.App.pages.textMapEditor = {
 
                 const element = node;
                 const tag = element.tagName.toLowerCase();
+                if (tag === 'br') return;
                 const nextStyle = {
                     color: inheritedStyle.color,
                     bold: inheritedStyle.bold,
@@ -866,7 +883,11 @@ window.App.pages.textMapEditor = {
                 Array.from(element.childNodes).forEach((child) => walk(child, nextStyle));
             };
 
-            walk(rowEl, { color: defaultColor, bold: false, underline: false, strike: false });
+            walk(rootNode, { color: defaultColor, bold: false, underline: false, strike: false });
+            return cells;
+        };
+        const parseRowDom = (rowEl) => {
+            const cells = parseStyledCellsFromDom(rowEl, this.config.cols);
             return ensureRowLength(cells);
         };
         const syncRowFromEditor = (rowIndex, options = {}) => {
@@ -1067,26 +1088,18 @@ window.App.pages.textMapEditor = {
                 updateCurrentStyleFromSelection();
             }
         };
-        const insertToolCharacter = (char) => {
-            if (editorMode !== 'text') return;
-
-            restoreSelection(selectionState, { focus: true });
-
-            if (typeof document.execCommand === 'function') {
-                document.execCommand('insertText', false, char);
-            }
+        const parseStyledCellsFromHtml = (html, maxCells = this.config.cols) => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html;
+            return parseStyledCellsFromDom(wrapper, maxCells);
         };
-        const applyPaintCell = (rowIndex, colIndex) => {
-            if (!selectedBrush) return false;
-
-            const nextCell = createCell(selectedBrush, currentTextStyle);
-            if (isSameCell(mapData[rowIndex][colIndex], nextCell)) return false;
-
-            mapData[rowIndex][colIndex] = nextCell;
-            activeRow = rowIndex;
-            selectionState = normalizeSelection({ row: rowIndex, start: colIndex, end: colIndex });
-            return true;
+        const buildSanitizedClipboardHtml = (html, maxCells = this.config.cols) => {
+            const cells = parseStyledCellsFromHtml(html, maxCells);
+            return cells.length > 0 ? buildRichRowHtml(cells) : '';
         };
+        const copyToolCharacter = (char) => copyClipboardPayload(
+            buildRichClipboardPayloadFromCells([createCell(char, currentTextStyle)])
+        );
         const applyRectangleFill = (start, end) => {
             if (!selectedBrush) return;
 
@@ -1185,27 +1198,16 @@ window.App.pages.textMapEditor = {
         btnModeText.addEventListener('click', () => {
             editorMode = 'text';
             rectDrag = null;
-            paintStroke = null;
             syncModeUI();
             renderRows({ focus: true });
             updateCursorLabel();
             updateCurrentStyleFromSelection();
         });
 
-        btnModePaint.addEventListener('click', () => {
-            if (editorMode === 'text') syncAllRowsFromDom();
-            editorMode = 'paint';
-            rectDrag = null;
-            paintStroke = null;
-            syncModeUI();
-            renderRows({ focus: false });
-        });
-
         btnModeRect.addEventListener('click', () => {
             if (editorMode === 'text') syncAllRowsFromDom();
             editorMode = 'rect';
             rectDrag = null;
-            paintStroke = null;
             syncModeUI();
             renderRows({ focus: false });
         });
@@ -1220,21 +1222,26 @@ window.App.pages.textMapEditor = {
         charButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 const currentChar = button.dataset.char || button.innerText;
-                selectedBrush = currentChar;
+                setSelectedBrush(currentChar);
 
                 if (editorMode === 'text') {
-                    insertToolCharacter(currentChar);
-                } else {
-                    syncModeUI();
-                    renderRows({ focus: false });
+                    copyToolCharacter(currentChar);
+                    return;
                 }
 
-                syncModeUI();
+                renderRows({ focus: false });
             });
         });
 
         btnUndo.addEventListener('click', () => undoHistory());
         btnRedo.addEventListener('click', () => redoHistory());
+
+        inpSelectedChar.addEventListener('focus', (event) => {
+            event.target.select();
+        });
+        inpSelectedChar.addEventListener('input', (event) => {
+            setSelectedBrush(event.target.value);
+        });
 
         inpTextColor.addEventListener('mousedown', () => {
             if (editorMode === 'text') captureSelectionFromDom();
@@ -1254,7 +1261,7 @@ window.App.pages.textMapEditor = {
         btnCopyAll.addEventListener('click', () => {
             if (editorMode === 'text') syncAllRowsFromDom();
 
-            copyText(getPlainTextMap());
+            copyClipboardPayload(buildRichClipboardPayloadForMap());
             btnCopyAll.textContent = t.copied;
 
             if (copyAllResetTimer) clearTimeout(copyAllResetTimer);
@@ -1300,7 +1307,31 @@ window.App.pages.textMapEditor = {
             const copyRowButton = event.target.closest('[data-copy-row]');
             if (copyRowButton) {
                 if (editorMode === 'text') syncAllRowsFromDom();
-                copyText(getPlainTextRow(Number(copyRowButton.dataset.copyRow)));
+                copyClipboardPayload(buildRichClipboardPayloadForRow(Number(copyRowButton.dataset.copyRow)));
+            }
+        });
+
+        container.addEventListener('copy', (event) => {
+            if (editorMode !== 'text') return;
+
+            const domSelection = getSelectionStateFromDom();
+            if (!domSelection) return;
+
+            const rowEl = getRowEditor(domSelection.row);
+            if (rowEl) mapData[domSelection.row] = parseRowDom(rowEl);
+
+            const payload = buildRichClipboardPayloadForSelection(domSelection);
+            if (!payload) return;
+
+            selectionState = domSelection;
+            activeRow = domSelection.row;
+            event.preventDefault();
+
+            if (event.clipboardData) {
+                event.clipboardData.setData('text/plain', payload.text);
+                event.clipboardData.setData('text/html', payload.html);
+            } else {
+                copyClipboardPayload(payload);
             }
         });
 
@@ -1358,9 +1389,20 @@ window.App.pages.textMapEditor = {
             if (!rowEl || editorMode !== 'text') return;
 
             event.preventDefault();
+            const pastedHtml = event.clipboardData?.getData('text/html') || '';
+            const sanitizedHtml = pastedHtml ? buildSanitizedClipboardHtml(pastedHtml) : '';
+            const rowIndex = Number(rowEl.dataset.row);
+
+            if (sanitizedHtml && typeof document.execCommand === 'function') {
+                document.execCommand('insertHTML', false, sanitizedHtml);
+                requestAnimationFrame(() => syncRowFromEditor(rowIndex, { focus: true }));
+                return;
+            }
+
             const pastedText = (event.clipboardData?.getData('text/plain') || '').replace(/\r?\n/g, '');
             if (typeof document.execCommand === 'function') {
                 document.execCommand('insertText', false, pastedText);
+                requestAnimationFrame(() => syncRowFromEditor(rowIndex, { focus: true }));
             }
         });
 
@@ -1392,22 +1434,6 @@ window.App.pages.textMapEditor = {
         container.addEventListener('mousedown', (event) => {
             if (event.button !== 0) return;
 
-            if (editorMode === 'paint') {
-                const target = getRectSlotTargetFromEvent(event);
-                if (!target || !selectedBrush) return;
-
-                paintStroke = {
-                    changed: applyPaintCell(target.row, target.col),
-                    lastRow: target.row,
-                    lastCol: target.col
-                };
-                renderRows({ focus: false });
-                updateCursorLabel();
-                updateCurrentStyleFromSelection();
-                event.preventDefault();
-                return;
-            }
-
             if (editorMode !== 'rect') return;
 
             const target = getRectSlotTargetFromEvent(event);
@@ -1421,20 +1447,6 @@ window.App.pages.textMapEditor = {
         });
 
         container.addEventListener('mouseover', (event) => {
-            if (editorMode === 'paint' && paintStroke) {
-                const target = getRectSlotTargetFromEvent(event);
-                if (!target) return;
-                if (target.row === paintStroke.lastRow && target.col === paintStroke.lastCol) return;
-
-                paintStroke.lastRow = target.row;
-                paintStroke.lastCol = target.col;
-                paintStroke.changed = applyPaintCell(target.row, target.col) || paintStroke.changed;
-                renderRows({ focus: false });
-                updateCursorLabel();
-                updateCurrentStyleFromSelection();
-                return;
-            }
-
             if (editorMode !== 'rect' || !rectDrag) return;
 
             const target = getRectSlotTargetFromEvent(event);
@@ -1446,11 +1458,6 @@ window.App.pages.textMapEditor = {
         });
 
         const handleMouseUp = () => {
-            if (editorMode === 'paint' && paintStroke) {
-                if (paintStroke.changed) pushHistory();
-                paintStroke = null;
-            }
-
             if (editorMode !== 'rect' || !rectDrag) return;
 
             const finalRect = rectDrag;
