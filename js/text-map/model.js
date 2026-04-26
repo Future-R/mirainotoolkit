@@ -4,7 +4,9 @@
 
     const BLANK_CELL = 'Ｘ';
     const DEFAULT_COLOR = '#ffffff';
-    const HALF_WIDTH_POOL = " ~`1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()[]{}-_=+.,;:№\\/|<>'\"｡･｢｣ﾄﾐｴｮﾖﾛ☺☻ﾞﾘﾉ╔╦╗╠╬╣╚╩╝═║⊙░▒▓┄┅┆┇";
+    const FULL_WIDTH_POOL = "※∞✟";
+    const HALF_WIDTH_POOL = " ~`1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()[]{}-_=+.,;:№\\/|<>'\"｡･｢｣ﾄﾐｴｮﾖﾛ☺☻ﾞﾘﾉ╔╦╗╠╬╣╚╩╝═║⊙░▒▓┄┅┆┇╳";
+    const FULL_WIDTH_SET = new Set(Array.from(FULL_WIDTH_POOL));
     const HALF_WIDTH_SET = new Set(Array.from(HALF_WIDTH_POOL));
     const SLOT_CONTINUATION = Symbol('text-map-slot-continuation');
     const colorParser = document.createElement('span');
@@ -75,16 +77,20 @@
         )
     );
 
-    const isHalfWidthChar = (char) => {
+    const getWidthRule = (char) => {
         const normalizedChar = normalizeSelectedChar(char);
-        if (!normalizedChar) return false;
-        if (HALF_WIDTH_SET.has(normalizedChar)) return true;
+        if (!normalizedChar) return 'full';
+        if (FULL_WIDTH_SET.has(normalizedChar)) return 'full';
+        if (HALF_WIDTH_SET.has(normalizedChar)) return 'half';
 
         const codePoint = normalizedChar.codePointAt(0);
-        if (codePoint == null) return false;
-        if (codePoint <= 0x7f) return true;
-        return !isFullWidthCodePoint(codePoint);
+        if (codePoint == null) return 'full';
+        if (codePoint <= 0x7f) return 'half';
+        return isFullWidthCodePoint(codePoint) ? 'full' : 'half';
     };
+
+    const isHalfWidthChar = (char) => getWidthRule(char) === 'half';
+    const isFullWidthChar = (char) => getWidthRule(char) === 'full';
 
     const getCharWidth = (char) => (isHalfWidthChar(char) ? 1 : 2);
     const getCharDisplayUnits = getCharWidth;
@@ -569,6 +575,7 @@
     ns.model = {
         BLANK_CELL,
         DEFAULT_COLOR,
+        FULL_WIDTH_POOL,
         HALF_WIDTH_POOL,
         clamp,
         escapeHtml,
@@ -576,6 +583,7 @@
         normalizeChar,
         normalizeColor,
         getReadableTextColor,
+        isFullWidthChar,
         isHalfWidthChar,
         getCharWidth,
         getCellWidth,
