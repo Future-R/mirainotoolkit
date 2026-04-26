@@ -4,6 +4,9 @@
 
     const BLANK_CELL = 'Ｘ';
     const DEFAULT_COLOR = '#ffffff';
+    const HALF_WIDTH_POOL = " ~`1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()[]{}-_=+.,;:№\\/|<>'\"｡･｢｣ﾄﾐｴｮﾖﾛ☺☻ﾞﾘﾉ╔╦╗╠╬╣╚╩╝═║";
+    const HALF_WIDTH_SET = new Set(Array.from(HALF_WIDTH_POOL));
+    const SLOT_CONTINUATION = Symbol('text-map-slot-continuation');
     const colorParser = document.createElement('span');
 
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -48,47 +51,6 @@
         return brightness >= 160 ? '#18181b' : '#ffffff';
     };
 
-    const createCell = (char = BLANK_CELL, style = {}) => ({
-        char: normalizeChar(char),
-        color: normalizeColor(style.color),
-        bold: Boolean(style.bold),
-        underline: Boolean(style.underline),
-        strike: Boolean(style.strike)
-    });
-
-    const cloneCell = (cell) => createCell(cell?.char, cell || {});
-
-    const ensureRowLength = (cells = [], cols = ns.DEFAULT_CONFIG.maxSize) => {
-        const normalized = Array.from({ length: cols }, (_, index) => (
-            cells[index] ? cloneCell(cells[index]) : createCell()
-        ));
-        return normalized.slice(0, cols);
-    };
-
-    const createEmptyMap = (rows, cols) => (
-        Array.from({ length: rows }, () => Array.from({ length: cols }, () => createCell()))
-    );
-
-    const cloneMapData = (source = []) => source.map((row) => row.map((cell) => cloneCell(cell)));
-
-    const isSameCell = (left, right) => (
-        left.char === right.char &&
-        left.color === right.color &&
-        left.bold === right.bold &&
-        left.underline === right.underline &&
-        left.strike === right.strike
-    );
-
-    const isSameStyle = (left, right) => (
-        left.color === right.color &&
-        left.bold === right.bold &&
-        left.underline === right.underline &&
-        left.strike === right.strike
-    );
-
-    const getPlainTextRow = (mapData, rowIndex) => (mapData[rowIndex] || []).map((cell) => cell.char).join('');
-    const getPlainTextMap = (mapData) => (mapData || []).map((_, rowIndex) => getPlainTextRow(mapData, rowIndex)).join('\n');
-
     const isFullWidthCodePoint = (codePoint) => (
         codePoint >= 0x1100 && (
             codePoint <= 0x115f ||
@@ -113,9 +75,251 @@
         )
     );
 
-    const getCharDisplayUnits = (char) => {
-        const codePoint = Array.from(String(char || BLANK_CELL))[0]?.codePointAt(0) || BLANK_CELL.codePointAt(0);
-        return isFullWidthCodePoint(codePoint) ? 2 : 1;
+    const isHalfWidthChar = (char) => {
+        const normalizedChar = normalizeSelectedChar(char);
+        if (!normalizedChar) return false;
+        if (HALF_WIDTH_SET.has(normalizedChar)) return true;
+
+        const codePoint = normalizedChar.codePointAt(0);
+        if (codePoint == null) return false;
+        if (codePoint <= 0x7f) return true;
+        return !isFullWidthCodePoint(codePoint);
+    };
+
+    const getCharWidth = (char) => (isHalfWidthChar(char) ? 1 : 2);
+    const getCharDisplayUnits = getCharWidth;
+
+    const createCell = (char = BLANK_CELL, style = {}) => {
+        const normalizedChar = normalizeChar(char);
+        const width = style.width === 1 || style.width === 2 ? style.width : getCharWidth(normalizedChar);
+        return {
+            char: normalizedChar,
+            width,
+            color: normalizeColor(style.color),
+            bold: Boolean(style.bold),
+            underline: Boolean(style.underline),
+            strike: Boolean(style.strike)
+        };
+    };
+
+    const cloneCell = (cell) => createCell(cell?.char, cell || {});
+    const getCellWidth = (cell) => {
+        if (!cell) return 1;
+        return cell.width === 1 || cell.width === 2 ? cell.width : getCharWidth(cell.char);
+    };
+
+    const createBlankCell = () => createCell(BLANK_CELL);
+    const createHalfSpaceCell = () => createCell(' ');
+
+    const measureRowSlots = (cells = []) => cells.reduce((total, cell) => total + getCellWidth(cell), 0);
+
+    const rowToSlotArray = (rowCells = [], slotCols = ns.DEFAULT_CONFIG.maxSize * 2) => {
+        const slots = Array.from({ length: slotCols }, () => null);
+        let slotIndex = 0;
+
+        for (const cell of rowCells) {
+            const nextCell = cloneCell(cell);
+            const width = getCellWidth(nextCell);
+            nextCell.width = width;
+            if (slotIndex + width > slotCols) break;
+
+            slots[slotIndex] = nextCell;
+            if (width === 2 && slotIndex + 1 < slotCols) slots[slotIndex + 1] = SLOT_CONTINUATION;
+            slotIndex += width;
+        }
+
+        return slots;
+    };
+
+    const slotArrayToRow = (slots = [], slotCols = slots.length) => {
+        const rowCells = [];
+        for (let slotIndex = 0; slotIndex < slotCols; slotIndex += 1) {
+            const slot = slots[slotIndex];
+            if (slot === SLOT_CONTINUATION) {
+                rowCells.push(createHalfSpaceCell());
+                continue;
+            }
+            if (!slot) {
+                rowCells.push(createHalfSpaceCell());
+                continue;
+            }
+
+            const width = getCellWidth(slot);
+            rowCells.push(createCell(slot.char, slot));
+            if (width === 2) {
+                slotIndex += 1;
+            }
+        }
+        return rowCells;
+    };
+
+    const normalizeRow = (cells = [], slotCols = ns.DEFAULT_CONFIG.maxSize * 2) => {
+        const sanitized = [];
+        let usedSlots = 0;
+
+        for (const cell of cells) {
+            const nextCell = cloneCell(cell);
+            const width = getCellWidth(nextCell);
+            nextCell.width = width;
+            if (usedSlots + width > slotCols) break;
+            sanitized.push(nextCell);
+            usedSlots += width;
+        }
+
+        while (usedSlots < slotCols) {
+            if (slotCols - usedSlots >= 2) {
+                sanitized.push(createBlankCell());
+                usedSlots += 2;
+            } else {
+                sanitized.push(createHalfSpaceCell());
+                usedSlots += 1;
+            }
+        }
+
+        return sanitized;
+    };
+
+    const truncateRowToSlots = (cells = [], slotCols = ns.DEFAULT_CONFIG.maxSize * 2) => {
+        const sanitized = [];
+        let usedSlots = 0;
+
+        for (const cell of cells) {
+            const nextCell = cloneCell(cell);
+            const width = getCellWidth(nextCell);
+            nextCell.width = width;
+            if (usedSlots + width > slotCols) break;
+            sanitized.push(nextCell);
+            usedSlots += width;
+        }
+
+        return sanitized;
+    };
+
+    const createEmptyRow = (slotCols = ns.DEFAULT_CONFIG.cols * 2) => normalizeRow([], slotCols);
+    const createEmptyMap = (rows, slotCols) => (
+        Array.from({ length: rows }, () => createEmptyRow(slotCols))
+    );
+
+    const cloneMapData = (source = []) => source.map((row) => row.map((cell) => cloneCell(cell)));
+
+    const isSameCell = (left, right) => (
+        left.char === right.char &&
+        getCellWidth(left) === getCellWidth(right) &&
+        left.color === right.color &&
+        left.bold === right.bold &&
+        left.underline === right.underline &&
+        left.strike === right.strike
+    );
+
+    const isSameStyle = (left, right) => (
+        left.color === right.color &&
+        left.bold === right.bold &&
+        left.underline === right.underline &&
+        left.strike === right.strike
+    );
+
+    const getPlainTextRow = (mapData, rowIndex) => (mapData[rowIndex] || []).map((cell) => cell.char).join('');
+    const getPlainTextMap = (mapData) => (mapData || []).map((_, rowIndex) => getPlainTextRow(mapData, rowIndex)).join('\n');
+
+    const buildRowMetrics = (rowCells = [], slotCols = measureRowSlots(rowCells)) => {
+        const charToSlot = [0];
+        const slotToChar = Array.from({ length: slotCols + 1 }, () => 0);
+        let runningSlots = 0;
+
+        rowCells.forEach((cell, cellIndex) => {
+            const width = getCellWidth(cell);
+            for (let offset = 0; offset < width && runningSlots + offset <= slotCols; offset += 1) {
+                slotToChar[runningSlots + offset] = cellIndex;
+            }
+            runningSlots += width;
+            charToSlot.push(runningSlots);
+            if (runningSlots <= slotCols) slotToChar[runningSlots] = cellIndex + 1;
+        });
+
+        while (runningSlots < slotCols) {
+            runningSlots += 1;
+            slotToChar[runningSlots] = rowCells.length;
+        }
+
+        slotToChar[slotCols] = rowCells.length;
+
+        return {
+            cells: rowCells,
+            slotCols,
+            charToSlot,
+            slotToChar
+        };
+    };
+
+    const charOffsetToSlotOffset = (metrics, charOffset) => {
+        if (!metrics) return 0;
+        const normalized = clamp(charOffset, 0, metrics.charToSlot.length - 1);
+        return metrics.charToSlot[normalized] ?? 0;
+    };
+
+    const slotOffsetToCharOffset = (metrics, slotOffset) => {
+        if (!metrics) return 0;
+        const normalized = clamp(slotOffset, 0, metrics.slotCols);
+        return metrics.slotToChar[normalized] ?? 0;
+    };
+
+    const getCellAtSlot = (rowCells = [], slotOffset = 0, slotCols = measureRowSlots(rowCells)) => {
+        const slots = rowToSlotArray(rowCells, slotCols);
+        const normalized = clamp(slotOffset, 0, Math.max(slotCols - 1, 0));
+        const slot = slots[normalized];
+        if (slot === SLOT_CONTINUATION) return slots[normalized - 1] || null;
+        return slot || null;
+    };
+
+    const getCellIndexAtSlot = (rowCells = [], slotOffset = 0, slotCols = measureRowSlots(rowCells)) => {
+        const metrics = buildRowMetrics(rowCells, slotCols);
+        const charOffset = slotOffsetToCharOffset(metrics, slotOffset);
+        if (charOffset <= 0) return 0;
+        return clamp(charOffset - 1, 0, Math.max(rowCells.length - 1, 0));
+    };
+
+    const sliceRowBySlotRange = (rowCells = [], startSlot = 0, endSlot = 0, slotCols = measureRowSlots(rowCells)) => {
+        const metrics = buildRowMetrics(rowCells, slotCols);
+        const rangeStart = clamp(Math.min(startSlot, endSlot), 0, slotCols);
+        const rangeEnd = clamp(Math.max(startSlot, endSlot), 0, slotCols);
+        const charStart = slotOffsetToCharOffset(metrics, rangeStart);
+        const charEnd = slotOffsetToCharOffset(metrics, rangeEnd);
+        return rowCells.slice(charStart, charEnd).map((cell) => cloneCell(cell));
+    };
+
+    const clearSlotForPlacement = (slots, slotIndex) => {
+        const slot = slots[slotIndex];
+        if (slot === SLOT_CONTINUATION) {
+            slots[slotIndex] = null;
+            if (slotIndex > 0 && slots[slotIndex - 1] && slots[slotIndex - 1] !== SLOT_CONTINUATION) {
+                const startCell = slots[slotIndex - 1];
+                const width = getCellWidth(startCell);
+                slots[slotIndex - 1] = null;
+                if (width === 2 && slotIndex < slots.length) slots[slotIndex] = null;
+            }
+            return;
+        }
+
+        if (!slot) return;
+        const width = getCellWidth(slot);
+        slots[slotIndex] = null;
+        if (width === 2 && slotIndex + 1 < slots.length) slots[slotIndex + 1] = null;
+    };
+
+    const placeCellInSlotArray = (slots, slotIndex, cell) => {
+        const nextCell = cloneCell(cell);
+        const width = getCellWidth(nextCell);
+        if (slotIndex < 0 || slotIndex >= slots.length) return false;
+        if (slotIndex + width > slots.length) return false;
+
+        for (let offset = 0; offset < width; offset += 1) {
+            clearSlotForPlacement(slots, slotIndex + offset);
+        }
+
+        nextCell.width = width;
+        slots[slotIndex] = nextCell;
+        if (width === 2) slots[slotIndex + 1] = SLOT_CONTINUATION;
+        return true;
     };
 
     const buildRunMarkup = (text, style, options = {}) => {
@@ -163,15 +367,20 @@
     });
 
     const parseStyledCellsFromDom = (rootNode, options = {}) => {
-        const maxCells = options.maxCells ?? ns.DEFAULT_CONFIG.maxSize;
+        const maxSlots = options.maxSlots ?? Infinity;
         const defaultColor = options.defaultColor || DEFAULT_COLOR;
         const cells = [];
+        let usedSlots = 0;
+
         const walk = (node, inheritedStyle) => {
-            if (cells.length >= maxCells) return;
+            if (usedSlots >= maxSlots) return;
 
             if (node.nodeType === Node.TEXT_NODE) {
                 Array.from((node.nodeValue || '').replace(/\r?\n/g, '').replace(/\u200b/g, '').replace(/\u00a0/g, ' ')).forEach((char) => {
-                    if (cells.length < maxCells) cells.push(createCell(char, inheritedStyle));
+                    if (usedSlots >= maxSlots) return;
+                    const cell = createCell(char, inheritedStyle);
+                    cells.push(cell);
+                    usedSlots += getCellWidth(cell);
                 });
                 return;
             }
@@ -218,8 +427,10 @@
     };
 
     const buildSanitizedClipboardHtml = (html, options = {}) => {
+        const maxSlots = options.maxSlots ?? Infinity;
         const cells = parseStyledCellsFromHtml(html, options);
-        return cells.length > 0 ? buildRichRowHtml(cells) : '';
+        const normalized = maxSlots === Infinity ? cells : truncateRowToSlots(cells, maxSlots);
+        return normalized.length > 0 ? buildRichRowHtml(normalized) : '';
     };
 
     const buildErbLine = (rowCells, options = {}) => {
@@ -298,7 +509,8 @@
     };
 
     const parseErbScript = (erbText, options = {}) => {
-        const maxSize = options.maxSize ?? ns.DEFAULT_CONFIG.maxSize;
+        const maxCols = options.maxCols ?? ns.DEFAULT_CONFIG.maxSize;
+        const maxSlotCols = maxCols * 2;
         const defaultColor = options.defaultColor || DEFAULT_COLOR;
         const htmlPayload = extractErbHtmlPayload(erbText);
         if (htmlPayload == null) return null;
@@ -331,19 +543,20 @@
         }
 
         const rawRows = rowNodes
-            .slice(0, maxSize)
-            .map((rowNode) => parseStyledCellsFromDom(rowNode, { maxCells: maxSize, defaultColor }));
+            .slice(0, ns.DEFAULT_CONFIG.maxSize)
+            .map((rowNode) => parseStyledCellsFromDom(rowNode, { defaultColor }));
 
-        const nextRows = clamp(rawRows.length || 1, 1, maxSize);
-        const nextCols = clamp(
-            rawRows.reduce((maxLength, row) => Math.max(maxLength, row.length), 1),
-            1,
-            maxSize
+        const nextRows = clamp(rawRows.length || 1, 1, ns.DEFAULT_CONFIG.maxSize);
+        const nextSlotCols = clamp(
+            rawRows.reduce((maxLength, row) => Math.max(maxLength, measureRowSlots(row)), 2),
+            2,
+            maxSlotCols
         );
-
-        const mapData = createEmptyMap(nextRows, nextCols);
+        const nextCols = clamp(Math.ceil(nextSlotCols / 2), 1, maxCols);
+        const normalizedSlotCols = nextCols * 2;
+        const mapData = createEmptyMap(nextRows, normalizedSlotCols);
         for (let rowIndex = 0; rowIndex < nextRows; rowIndex += 1) {
-            mapData[rowIndex] = ensureRowLength(rawRows[rowIndex] || [], nextCols);
+            mapData[rowIndex] = normalizeRow(rawRows[rowIndex] || [], normalizedSlotCols);
         }
 
         return {
@@ -356,15 +569,24 @@
     ns.model = {
         BLANK_CELL,
         DEFAULT_COLOR,
+        HALF_WIDTH_POOL,
         clamp,
         escapeHtml,
         normalizeSelectedChar,
         normalizeChar,
         normalizeColor,
         getReadableTextColor,
+        isHalfWidthChar,
+        getCharWidth,
+        getCellWidth,
         createCell,
         cloneCell,
-        ensureRowLength,
+        createBlankCell,
+        createHalfSpaceCell,
+        measureRowSlots,
+        normalizeRow,
+        truncateRowToSlots,
+        createEmptyRow,
         createEmptyMap,
         cloneMapData,
         isSameCell,
@@ -372,6 +594,15 @@
         getPlainTextRow,
         getPlainTextMap,
         getCharDisplayUnits,
+        buildRowMetrics,
+        charOffsetToSlotOffset,
+        slotOffsetToCharOffset,
+        getCellAtSlot,
+        getCellIndexAtSlot,
+        sliceRowBySlotRange,
+        rowToSlotArray,
+        slotArrayToRow,
+        placeCellInSlotArray,
         buildRichRowHtml,
         buildRichClipboardPayloadFromCells,
         parseStyledCellsFromDom,
