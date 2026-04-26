@@ -4,7 +4,7 @@
 
     const BLANK_CELL = 'Ｘ';
     const DEFAULT_COLOR = '#ffffff';
-    const HALF_WIDTH_POOL = " ~`1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()[]{}-_=+.,;:№\\/|<>'\"｡･｢｣ﾄﾐｴｮﾖﾛ☺☻ﾞﾘﾉ╔╦╗╠╬╣╚╩╝═║";
+    const HALF_WIDTH_POOL = " ~`1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()[]{}-_=+.,;:№\\/|<>'\"｡･｢｣ﾄﾐｴｮﾖﾛ☺☻ﾞﾘﾉ╔╦╗╠╬╣╚╩╝═║⊙░▒▓┄┅┆┇";
     const HALF_WIDTH_SET = new Set(Array.from(HALF_WIDTH_POOL));
     const SLOT_CONTINUATION = Symbol('text-map-slot-continuation');
     const colorParser = document.createElement('span');
