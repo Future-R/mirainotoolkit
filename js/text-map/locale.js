@@ -3,10 +3,10 @@ window.App.pages = window.App.pages || {};
 window.App.textMap = window.App.textMap || {};
 
 window.App.textMap.DEFAULT_CONFIG = {
-    rows: 10,
-    cols: 10,
+    rows: 32,
+    cols: 32,
     font: "'MS Gothic', monospace",
-    maxSize: 40
+    maxSize: 64
 };
 
 window.App.textMap.TOOLBOX_CHARS = [
