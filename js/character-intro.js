@@ -20,9 +20,9 @@ window.App.pages.characterIntro = {
             </div>
 
             <!-- Canvas Container (Responsive Wrapper) -->
-            <div class="w-full flex justify-center pb-8 p-0 sm:p-4 overflow-hidden">
-                <div id="ci-scale-wrapper" class="origin-top flex justify-center transition-transform duration-200" style="width: 900px;">
-                    <div id="character-intro-canvas" class="bg-white text-black p-12 relative flex-shrink-0 shadow-lg w-full" style="min-height: 1000px; font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;">
+            <div class="w-full flex justify-center pb-8 p-0 sm:p-4 overflow-hidden relative">
+                <div id="ci-scale-wrapper" class="origin-top transition-transform duration-200 flex-shrink-0" style="width: 900px; min-width: 900px;">
+                    <div id="character-intro-canvas" class="bg-white text-black p-12 relative shadow-lg w-full box-border" style="min-height: 1000px; font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;">
                     
                     <!-- Header -->
                     <div class="mb-10 text-left">
@@ -126,14 +126,22 @@ window.App.pages.characterIntro = {
              });
         });
 
-        // Window Resize Scaling
+        // Resize Scaling
+        window.ciIsExporting = false;
+
         const updateScale = () => {
+            if (window.ciIsExporting) return;
+
             const wrapper = document.getElementById('ci-scale-wrapper');
-            if (!wrapper) return;
+            if (!wrapper || !wrapper.parentElement) return;
             const containerWidth = wrapper.parentElement.clientWidth;
             
-            if (containerWidth < 900) {
-                const scale = containerWidth / 900;
+            // Add some margin on extremely small screens
+            const padding = containerWidth < 640 ? 16 : 0;
+            const targetWidth = containerWidth - padding;
+
+            if (targetWidth < 900) {
+                const scale = targetWidth / 900;
                 wrapper.style.transform = `scale(${scale})`;
                 // Remove the extra visual space caused by CSS transform keeping the original DOM height
                 wrapper.style.marginBottom = `-${wrapper.offsetHeight * (1 - scale)}px`;
@@ -142,6 +150,13 @@ window.App.pages.characterIntro = {
                 wrapper.style.marginBottom = '0px';
             }
         };
+
+        const resizeObserver = new ResizeObserver(() => updateScale());
+        const wrapper = document.getElementById('ci-scale-wrapper');
+        if (wrapper) {
+            resizeObserver.observe(wrapper);
+            if (wrapper.parentElement) resizeObserver.observe(wrapper.parentElement);
+        }
 
         window.addEventListener('resize', updateScale);
         // Initial call
@@ -167,6 +182,7 @@ window.App.pages.characterIntro = {
             overlay.classList.add('flex');
 
             try {
+                window.ciIsExporting = true;
                 const canvasElement = document.getElementById('character-intro-canvas');
                 const wrapperElement = document.getElementById('ci-scale-wrapper');
                 
@@ -195,8 +211,9 @@ window.App.pages.characterIntro = {
                 console.error("Export failed:", error);
                 alert("导出失败，请查看控制台日志。");
             } finally {
+                window.ciIsExporting = false;
                 // Restore responsive scale
-                window.dispatchEvent(new Event('resize'));
+                updateScale();
 
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
