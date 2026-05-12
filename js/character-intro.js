@@ -21,11 +21,11 @@ window.App.pages.characterIntro = {
                    <button id="btn-export-json" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="导出配置"><i data-lucide="file-down" class="w-4 h-4"></i> 导出配置</button>
                    <input type="file" id="ci-file-import" class="hidden" accept=".json">
                </div>
-               <button id="btn-export-img" class="atom-btn px-4 py-2 flex items-center gap-2 bg-[#1872F2] text-white hover:bg-[#1872F2]/90 border-0">
+               <button id="btn-export-img" class="atom-btn px-4 py-2 flex items-center gap-2">
                    <i data-lucide="download" class="w-4 h-4"></i>
                    导出图片
                </button>
-               <button id="btn-clear-all" class="atom-btn px-4 py-2 flex items-center gap-2 text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border-0">
+               <button id="btn-clear-all" class="atom-btn px-4 py-2 flex items-center gap-2 text-red-600">
                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                    清空
                </button>
@@ -115,8 +115,8 @@ window.App.pages.characterIntro = {
                 <input type="file" id="ci-file-${id}" class="hidden flex-shrink-0" accept="image/*">
             </div>
             <div class="mt-8 text-center w-full px-2">
-                <div class="text-[38px] font-bold outline-none mb-3 character-name" contenteditable="true" spellcheck="false">${defaultName}</div>
-                <div class="text-[18px] font-normal text-zinc-800 outline-none character-desc" contenteditable="true" spellcheck="false">${defaultDesc}</div>
+                <div class="text-[38px] font-bold outline-none mb-3 character-name min-h-[1.5em]" contenteditable="true" spellcheck="false">${defaultName}</div>
+                <div class="text-[18px] font-normal text-zinc-800 outline-none character-desc min-h-[1.5em]" contenteditable="true" spellcheck="false">${defaultDesc}</div>
             </div>
         </div>
         `;
@@ -503,13 +503,10 @@ window.App.pages.characterIntro = {
                      placeholder.classList.remove('hidden');
                  }
                  
-                 if (index < defaultTexts.length) {
-                     item.querySelector('.character-name').innerText = defaultTexts[index][0];
-                     item.querySelector('.character-desc').innerText = defaultTexts[index][1];
-                 } else {
-                     item.querySelector('.character-name').innerText = "人物名称";
-                     item.querySelector('.character-desc').innerText = "人物简介";
-                 }
+                 const nameNode = item.querySelector('.character-name');
+                 const descNode = item.querySelector('.character-desc');
+                 if (nameNode) nameNode.innerHTML = '<br/>';
+                 if (descNode) descNode.innerHTML = '<br/>';
              });
         });
 
