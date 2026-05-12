@@ -117,6 +117,7 @@ window.App.Router = {
         'text-map': 'textMapEditor',
         'jitter-text': 'jitterText',
         'video-rotate': 'videoRotator',
+        'character-intro': 'characterIntro',
         'card-game': 'cardGame'
     },
 
