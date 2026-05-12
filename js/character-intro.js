@@ -8,15 +8,27 @@ window.App.pages.characterIntro = {
         <div class="flex flex-col items-center justify-start flex-1 w-full fade-in pb-20">
             <!-- Toolbar -->
             <div class="bg-white/80 backdrop-blur border border-zinc-200 shadow-sm rounded-2xl p-4 mb-6 flex flex-wrap gap-4 items-center justify-center sticky top-4 z-50">
-               <button id="btn-export-img" class="atom-btn px-6 py-2 flex items-center gap-2">
+               <div class="flex items-center gap-2 border-r border-zinc-200 pr-4">
+                   <button id="btn-add-row" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="新增行"><i data-lucide="list-plus" class="w-4 h-4"></i> 新增行</button>
+                   <button id="btn-rem-row" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="删除行"><i data-lucide="list-minus" class="w-4 h-4"></i> 删除行</button>
+               </div>
+               <div class="flex items-center gap-2 border-r border-zinc-200 pr-4">
+                   <button id="btn-add-col" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="新增列"><i data-lucide="separator-vertical" class="w-4 h-4"></i> 新增列</button>
+                   <button id="btn-rem-col" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="删除列"><i data-lucide="trash" class="w-4 h-4"></i> 删除列</button>
+               </div>
+               <div class="flex items-center gap-2 border-r border-zinc-200 pr-4">
+                   <button id="btn-import-json" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="导入配置"><i data-lucide="file-up" class="w-4 h-4"></i> 导入配置</button>
+                   <button id="btn-export-json" class="atom-btn px-3 py-1.5 flex items-center gap-1 text-sm text-zinc-600 bg-zinc-100 hover:bg-zinc-200" title="导出配置"><i data-lucide="file-down" class="w-4 h-4"></i> 导出配置</button>
+                   <input type="file" id="ci-file-import" class="hidden" accept=".json">
+               </div>
+               <button id="btn-export-img" class="atom-btn px-4 py-2 flex items-center gap-2 bg-[#1872F2] text-white hover:bg-[#1872F2]/90 border-0">
                    <i data-lucide="download" class="w-4 h-4"></i>
-                   导出为图片
+                   导出图片
                </button>
-               <button id="btn-clear-all" class="atom-btn px-6 py-2 flex items-center gap-2">
+               <button id="btn-clear-all" class="atom-btn px-4 py-2 flex items-center gap-2 text-zinc-600 bg-zinc-100 hover:bg-zinc-200 border-0">
                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                   清空内容
+                   清空
                </button>
-               <span class="text-xs text-zinc-400 font-bold ml-4">点击图片或文字即可进行修改</span>
             </div>
 
             <!-- Canvas Container (Responsive Wrapper) -->
@@ -34,7 +46,7 @@ window.App.pages.characterIntro = {
                     </div>
                     
                     <!-- Grid -->
-                    <div class="grid grid-cols-2 gap-y-16 gap-x-12 px-6 mt-12 pb-12">
+                    <div id="ci-grid" class="grid gap-y-16 gap-x-12 px-6 mt-12 pb-12" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
                         ${this.renderCharacterItem(1, "人类少年", "很在意村里的精灵大姐姐。")}
                         ${this.renderCharacterItem(2, "精灵大姐姐", "对同村的人类少年温柔。")}
                         ${this.renderCharacterItem(3, "哥布林小子", "刚搬入村就对精灵大姐姐动歪心思。")}
@@ -308,34 +320,167 @@ window.App.pages.characterIntro = {
             updateCropTransform();
         });
 
-        // File Upload Handlers
-        for(let i=1; i<=4; i++) {
-            const fileInput = document.getElementById(`ci-file-${i}`);
+        let ciRows = 2;
+        let ciCols = 2;
+        let ciNextId = 5;
+        const grid = document.getElementById('ci-grid');
+        const scaleWrapper = document.getElementById('ci-scale-wrapper');
+
+        const updateGridStyle = () => {
+            const newWidth = Math.max(900, ciCols * 420);
+            scaleWrapper.style.width = `${newWidth}px`;
+            scaleWrapper.style.minWidth = `${newWidth}px`;
+            grid.style.gridTemplateColumns = `repeat(${ciCols}, minmax(0, 1fr))`;
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        const setupItemEvents = (id) => {
+            const fileInput = document.getElementById(`ci-file-${id}`);
+            if (!fileInput) return;
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if(file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        ciCropId = i;
+                        ciCropId = id;
                         openCropModal(event.target.result);
                         fileInput.value = '';
                     };
                     reader.readAsDataURL(file);
                 }
             });
+        };
+
+        const buildItemElement = (id, name, desc) => {
+            const div = document.createElement('div');
+            div.innerHTML = window.App.pages.characterIntro.renderCharacterItem(id, name, desc);
+            return div.firstElementChild;
+        };
+
+        // File Upload Handlers (Initial)
+        for(let i=1; i<=4; i++) {
+            setupItemEvents(i);
         }
+
+        // Layout controls
+        document.getElementById('btn-add-col').addEventListener('click', () => {
+            if (ciCols >= 8) return;
+            for(let r = ciRows - 1; r >= 0; r--) {
+                const insertIndex = r * ciCols + ciCols;
+                const newItem = buildItemElement(ciNextId++, "人物名称", "人物简介");
+                if (insertIndex >= grid.children.length) {
+                    grid.appendChild(newItem);
+                } else {
+                    grid.insertBefore(newItem, grid.children[insertIndex]);
+                }
+                setupItemEvents(ciNextId - 1);
+            }
+            ciCols++;
+            updateGridStyle();
+        });
+
+        document.getElementById('btn-rem-col').addEventListener('click', () => {
+            if (ciCols <= 1) return;
+            for(let r = ciRows - 1; r >= 0; r--) {
+                const removeIndex = r * ciCols + (ciCols - 1);
+                grid.removeChild(grid.children[removeIndex]);
+            }
+            ciCols--;
+            updateGridStyle();
+        });
+
+        document.getElementById('btn-add-row').addEventListener('click', () => {
+            if (ciRows >= 8) return;
+            for(let c = 0; c < ciCols; c++) {
+                const newItem = buildItemElement(ciNextId++, "人物名称", "人物简介");
+                grid.appendChild(newItem);
+                setupItemEvents(ciNextId - 1);
+            }
+            ciRows++;
+            updateGridStyle();
+        });
+
+        document.getElementById('btn-rem-row').addEventListener('click', () => {
+            if (ciRows <= 1) return;
+            for(let c = 0; c < ciCols; c++) {
+                grid.removeChild(grid.lastElementChild);
+            }
+            ciRows--;
+            updateGridStyle();
+        });
+
+        // JSON Export
+        document.getElementById('btn-export-json').addEventListener('click', () => {
+            const title = document.getElementById('ci-main-title').innerText;
+            const items = Array.from(grid.children).map(item => ({
+                name: item.querySelector('.character-name').innerText,
+                desc: item.querySelector('.character-desc').innerText
+            }));
+            
+            const data = {
+                title,
+                rows: ciRows,
+                cols: ciCols,
+                items
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '登场人物配置.json';
+            link.click();
+        });
+
+        // JSON Import
+        const importInput = document.getElementById('ci-file-import');
+        document.getElementById('btn-import-json').addEventListener('click', () => {
+            importInput.click();
+        });
+        
+        importInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (data.cols && data.rows && data.items) {
+                        document.getElementById('ci-main-title').innerText = data.title || "登场人物介绍";
+                        ciCols = parseInt(data.cols);
+                        ciRows = parseInt(data.rows);
+                        if (ciCols < 1) ciCols = 1;
+                        if (ciCols > 8) ciCols = 8;
+                        if (ciRows < 1) ciRows = 1;
+                        if (ciRows > 8) ciRows = 8;
+                        
+                        grid.innerHTML = '';
+                        ciNextId = 1;
+                        
+                        const totalCells = ciRows * ciCols;
+                        for (let i = 0; i < totalCells; i++) {
+                            const itemData = data.items[i] || { name: "人物名称", desc: "人物简介" };
+                            const newItem = buildItemElement(ciNextId++, itemData.name, itemData.desc);
+                            grid.appendChild(newItem);
+                            setupItemEvents(ciNextId - 1);
+                        }
+                        
+                        updateGridStyle();
+                    } else {
+                        alert("JSON格式不正确");
+                    }
+                } catch (err) {
+                    alert("无法解析JSON文件: " + err.message);
+                }
+                importInput.value = '';
+            };
+            reader.readAsText(file);
+        });
 
         // Clear All
         const btnClear = document.getElementById('btn-clear-all');
         btnClear.addEventListener('click', () => {
              document.getElementById('ci-main-title').innerText = "登场人物介绍";
-             for(let i=1; i<=4; i++) {
-                 const img = document.getElementById(`ci-img-${i}`);
-                 const placeholder = document.getElementById(`ci-placeholder-${i}`);
-                 img.src = '';
-                 img.classList.add('hidden');
-                 placeholder.classList.remove('hidden');
-             }
              
              const defaultTexts = [
                  ["人类少年", "很在意村里的精灵大姐姐。"],
@@ -346,8 +491,25 @@ window.App.pages.characterIntro = {
              
              const items = document.querySelectorAll('.character-item');
              items.forEach((item, index) => {
-                 item.querySelector('.character-name').innerText = defaultTexts[index][0];
-                 item.querySelector('.character-desc').innerText = defaultTexts[index][1];
+                 const id = item.getAttribute('data-id');
+                 const img = document.getElementById(`ci-img-${id}`);
+                 const placeholder = document.getElementById(`ci-placeholder-${id}`);
+                 
+                 if (img) {
+                     img.src = '';
+                     img.classList.add('hidden');
+                 }
+                 if (placeholder) {
+                     placeholder.classList.remove('hidden');
+                 }
+                 
+                 if (index < defaultTexts.length) {
+                     item.querySelector('.character-name').innerText = defaultTexts[index][0];
+                     item.querySelector('.character-desc').innerText = defaultTexts[index][1];
+                 } else {
+                     item.querySelector('.character-name').innerText = "人物名称";
+                     item.querySelector('.character-desc').innerText = "人物简介";
+                 }
              });
         });
 
@@ -365,8 +527,9 @@ window.App.pages.characterIntro = {
             const padding = containerWidth < 640 ? 16 : 0;
             const targetWidth = containerWidth - padding;
 
-            if (targetWidth < 900) {
-                const scale = targetWidth / 900;
+            const currentWidth = parseFloat(wrapper.style.width) || 900;
+            if (targetWidth < currentWidth) {
+                const scale = targetWidth / currentWidth;
                 wrapper.style.transform = `scale(${scale})`;
                 // Remove the extra visual space caused by CSS transform keeping the original DOM height
                 wrapper.style.marginBottom = `-${wrapper.offsetHeight * (1 - scale)}px`;
