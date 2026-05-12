@@ -20,8 +20,9 @@ window.App.pages.characterIntro = {
             </div>
 
             <!-- Canvas Container (Responsive Wrapper) -->
-            <div class="w-full overflow-x-auto flex justify-center pb-8 p-4">
-                <div id="character-intro-canvas" class="bg-white text-black p-12 relative flex-shrink-0 shadow-lg" style="width: 900px; min-height: 1000px; font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;">
+            <div class="w-full flex justify-center pb-8 p-0 sm:p-4 overflow-hidden">
+                <div id="ci-scale-wrapper" class="origin-top flex justify-center transition-transform duration-200" style="width: 900px;">
+                    <div id="character-intro-canvas" class="bg-white text-black p-12 relative flex-shrink-0 shadow-lg w-full" style="min-height: 1000px; font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;">
                     
                     <!-- Header -->
                     <div class="mb-10 text-left">
@@ -40,6 +41,7 @@ window.App.pages.characterIntro = {
                         ${this.renderCharacterItem(4, "矮人大叔", "村头老实本分的铁匠但没够着头像框。")}
                     </div>
 
+                    </div>
                 </div>
             </div>
             <!-- Generating Overlay -->
@@ -124,6 +126,27 @@ window.App.pages.characterIntro = {
              });
         });
 
+        // Window Resize Scaling
+        const updateScale = () => {
+            const wrapper = document.getElementById('ci-scale-wrapper');
+            if (!wrapper) return;
+            const containerWidth = wrapper.parentElement.clientWidth;
+            
+            if (containerWidth < 900) {
+                const scale = containerWidth / 900;
+                wrapper.style.transform = `scale(${scale})`;
+                // Remove the extra visual space caused by CSS transform keeping the original DOM height
+                wrapper.style.marginBottom = `-${wrapper.offsetHeight * (1 - scale)}px`;
+            } else {
+                wrapper.style.transform = 'scale(1)';
+                wrapper.style.marginBottom = '0px';
+            }
+        };
+
+        window.addEventListener('resize', updateScale);
+        // Initial call
+        setTimeout(updateScale, 10);
+
         // Export Image
         const btnExport = document.getElementById('btn-export-img');
         const overlay = document.getElementById('export-overlay');
@@ -145,7 +168,15 @@ window.App.pages.characterIntro = {
 
             try {
                 const canvasElement = document.getElementById('character-intro-canvas');
+                const wrapperElement = document.getElementById('ci-scale-wrapper');
                 
+                // Temporarily remove transform for accurate render
+                wrapperElement.style.transform = 'scale(1)';
+                wrapperElement.style.marginBottom = '0px';
+                
+                // Wait for browser reflow
+                await new Promise(resolve => setTimeout(resolve, 50));
+
                 // Keep original scale but use a solid scale for html2canvas
                 const canvas = await html2canvas(canvasElement, {
                     scale: 2, // High quality
@@ -164,6 +195,9 @@ window.App.pages.characterIntro = {
                 console.error("Export failed:", error);
                 alert("导出失败，请查看控制台日志。");
             } finally {
+                // Restore responsive scale
+                window.dispatchEvent(new Event('resize'));
+
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
             }
