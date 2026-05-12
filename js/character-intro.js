@@ -44,6 +44,44 @@ window.App.pages.characterIntro = {
                     </div>
                 </div>
             </div>
+
+            <!-- Crop Modal -->
+            <div id="ci-crop-modal" class="fixed inset-0 z-[200] hidden bg-[#141414] flex-col overflow-hidden">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-4 border-b border-white/10 text-white">
+                    <div class="w-8"></div>
+                    <div class="font-bold">裁剪图片</div>
+                    <button id="btn-crop-close" class="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <!-- Crop Area -->
+                <div class="flex-1 relative overflow-hidden flex items-center justify-center bg-black/80 ci-crop-container touch-none" id="ci-crop-container">
+                    <img id="ci-crop-img" class="absolute left-1/2 top-1/2 origin-center cursor-move max-w-none max-h-none pointer-events-none" style="transform: translate(-50%, -50%);" draggable="false" />
+                    
+                    <!-- Circular Overlay -->
+                    <div class="absolute inset-0 pointer-events-none" style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.6); border-radius: 50%; width: 320px; height: 320px; box-sizing: content-box; left: 50%; top: 50%; transform: translate(-50%, -50%);"></div>
+                    <div class="absolute inset-0 pointer-events-none border-2 border-white/50 rounded-full" style="width: 320px; height: 320px; left: 50%; top: 50%; transform: translate(-50%, -50%);"></div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="bg-[#141414] p-6 pb-8 text-white w-full">
+                    <!-- Slider -->
+                    <div class="flex items-center gap-4 max-w-md mx-auto mb-8">
+                        <i data-lucide="zoom-out" class="w-6 h-6 text-white/70"></i>
+                        <input type="range" id="ci-crop-slider" min="0.1" max="3" step="0.01" value="1" class="flex-1 h-1.5 bg-white/20 rounded-full appearance-none outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full cursor-pointer accent-[#1872F2]" />
+                        <i data-lucide="zoom-in" class="w-6 h-6 text-white/70"></i>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="flex items-center justify-center gap-4">
+                        <button id="btn-crop-cancel" class="px-8 py-2 rounded-lg border border-white/20 hover:bg-white/10 transition-colors text-sm">取消</button>
+                        <button id="btn-crop-save" class="px-8 py-2 rounded-lg bg-[#1872F2] hover:bg-[#1872F2]/90 transition-colors text-sm">保存</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Generating Overlay -->
             <div id="export-overlay" class="fixed inset-0 bg-white/80 backdrop-blur z-[100] hidden items-center justify-center flex-col gap-4">
                 <i data-lucide="loader-2" class="w-10 h-10 animate-spin text-orange-500"></i>
@@ -78,6 +116,198 @@ window.App.pages.characterIntro = {
     },
 
     attachEvents: function() {
+        // --- Crop State ---
+        let ciCropId = null;
+        let ciCropScale = 1;
+        let ciMinScale = 1;
+        let ciPanX = 0;
+        let ciPanY = 0;
+        let ciStartX = 0;
+        let ciStartY = 0;
+        let ciIsDragging = false;
+        let ciImgNaturalWidth = 0;
+        let ciImgNaturalHeight = 0;
+        let ciInitialDistance = 0;
+        let ciInitialScale = 1;
+        const CI_CROP_SIZE = 320;
+
+        const modal = document.getElementById('ci-crop-modal');
+        const cropImg = document.getElementById('ci-crop-img');
+        const container = document.getElementById('ci-crop-container');
+        const slider = document.getElementById('ci-crop-slider');
+
+        const updateCropTransform = () => {
+            cropImg.style.transform = `translate(calc(-50% + ${ciPanX}px), calc(-50% + ${ciPanY}px)) scale(${ciCropScale})`;
+        };
+
+        const constrainPan = () => {
+            const imgBoundWidth = ciImgNaturalWidth * ciCropScale;
+            const imgBoundHeight = ciImgNaturalHeight * ciCropScale;
+            
+            const maxPanX = Math.max(0, (imgBoundWidth - CI_CROP_SIZE) / 2);
+            const maxPanY = Math.max(0, (imgBoundHeight - CI_CROP_SIZE) / 2);
+            
+            ciPanX = Math.max(-maxPanX, Math.min(ciPanX, maxPanX));
+            ciPanY = Math.max(-maxPanY, Math.min(ciPanY, maxPanY));
+        };
+
+        const openCropModal = (src) => {
+            cropImg.onload = () => {
+                ciImgNaturalWidth = cropImg.naturalWidth || 1;
+                ciImgNaturalHeight = cropImg.naturalHeight || 1;
+                
+                const scaleX = CI_CROP_SIZE / ciImgNaturalWidth;
+                const scaleY = CI_CROP_SIZE / ciImgNaturalHeight;
+                ciMinScale = Math.max(scaleX, scaleY); // Ensure we cover the hole
+                
+                ciCropScale = ciMinScale;
+                ciPanX = 0;
+                ciPanY = 0;
+                
+                slider.min = ciMinScale;
+                slider.max = ciMinScale * 4;
+                slider.value = ciCropScale;
+                
+                updateCropTransform();
+                
+                if (window.lucide) window.lucide.createIcons({root: modal});
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            };
+            cropImg.src = src;
+        };
+
+        const closeCropModal = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            ciCropId = null;
+            cropImg.src = '';
+        };
+
+        document.getElementById('btn-crop-cancel').addEventListener('click', closeCropModal);
+        document.getElementById('btn-crop-close').addEventListener('click', closeCropModal);
+        
+        document.getElementById('btn-crop-save').addEventListener('click', () => {
+            if (!ciCropId) return;
+            const canvas = document.createElement('canvas');
+            canvas.width = CI_CROP_SIZE;
+            canvas.height = CI_CROP_SIZE;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw background as white or transparent? Characters usually have white background.
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, CI_CROP_SIZE, CI_CROP_SIZE);
+            
+            ctx.translate(CI_CROP_SIZE/2, CI_CROP_SIZE/2);
+            ctx.translate(ciPanX, ciPanY);
+            ctx.scale(ciCropScale, ciCropScale);
+            
+            ctx.drawImage(cropImg, -ciImgNaturalWidth/2, -ciImgNaturalHeight/2, ciImgNaturalWidth, ciImgNaturalHeight);
+            
+            const croppedDataUrl = canvas.toDataURL('image/png', 1.0);
+            
+            const targetImg = document.getElementById(`ci-img-${ciCropId}`);
+            const placeholder = document.getElementById(`ci-placeholder-${ciCropId}`);
+            targetImg.src = croppedDataUrl;
+            targetImg.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            
+            closeCropModal();
+        });
+
+        // Drag handlers
+        const getClientPos = (e) => {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        };
+
+        const startDrag = (e) => {
+            if (!modal.classList.contains('flex')) return;
+            if (e.touches && e.touches.length > 1) return;
+
+            ciIsDragging = true;
+            const pos = getClientPos(e);
+            
+            ciStartX = pos.x - ciPanX;
+            ciStartY = pos.y - ciPanY;
+        };
+
+        const onDrag = (e) => {
+            if (!ciIsDragging || !modal.classList.contains('flex')) return;
+            if (e.touches && e.touches.length > 1) return;
+            
+            if (e.cancelable) {
+                e.preventDefault();
+            }
+            
+            const pos = getClientPos(e);
+            ciPanX = pos.x - ciStartX;
+            ciPanY = pos.y - ciStartY;
+            
+            constrainPan();
+            updateCropTransform();
+        };
+
+        const endDrag = () => { ciIsDragging = false; };
+
+        container.addEventListener('mousedown', startDrag);
+        container.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('mousemove', onDrag, { passive: false });
+        window.addEventListener('touchmove', onDrag, { passive: false });
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+        // Pinch handlers
+        container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2 && modal.classList.contains('flex')) {
+                ciIsDragging = false;
+                ciInitialDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                ciInitialScale = ciCropScale;
+            }
+        }, {passive: false});
+
+        container.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && modal.classList.contains('flex')) {
+                if (e.cancelable) e.preventDefault();
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                ciCropScale = ciInitialScale * (currentDistance / ciInitialDistance);
+                ciCropScale = Math.max(ciMinScale, Math.min(ciCropScale, ciMinScale * 4));
+                slider.value = ciCropScale;
+                
+                constrainPan();
+                updateCropTransform();
+            }
+        }, {passive: false});
+
+        // Wheel Zoom
+        container.addEventListener('wheel', (e) => {
+            if (!modal.classList.contains('flex')) return;
+            if (e.cancelable) e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            ciCropScale = ciCropScale * (1 + delta);
+            ciCropScale = Math.max(ciMinScale, Math.min(ciCropScale, ciMinScale * 4));
+            
+            slider.value = ciCropScale;
+            constrainPan();
+            updateCropTransform();
+        }, { passive: false });
+
+        // Slider
+        slider.addEventListener('input', (e) => {
+            ciCropScale = parseFloat(e.target.value);
+            constrainPan();
+            updateCropTransform();
+        });
+
         // File Upload Handlers
         for(let i=1; i<=4; i++) {
             const fileInput = document.getElementById(`ci-file-${i}`);
@@ -86,13 +316,8 @@ window.App.pages.characterIntro = {
                 if(file && file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        const img = document.getElementById(`ci-img-${i}`);
-                        const placeholder = document.getElementById(`ci-placeholder-${i}`);
-                        img.src = event.target.result;
-                        img.classList.remove('hidden');
-                        placeholder.classList.add('hidden');
-                        
-                        // Clear input to allow re-uploading the same file if needed
+                        ciCropId = i;
+                        openCropModal(event.target.result);
                         fileInput.value = '';
                     };
                     reader.readAsDataURL(file);
