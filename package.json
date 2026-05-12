@@ -1,0 +1,9 @@
+{
+  "name": "mirainotoolkit",
+  "private": true,
+  "scripts": {
+    "dev": "node serve-local.js",
+    "start": "node serve-local.js",
+    "build": "echo \"Nothing to build\""
+  }
+}

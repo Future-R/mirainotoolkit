@@ -69,6 +69,17 @@ window.DEFAULT_TOOLBOX_CONFIG = {
       "iconColor": "text-white"
     },
     {
+      "id": "character-intro",
+      "name": "人物介绍生成器",
+      "desc": "它比五环少一环",
+      "path": "character-intro",
+      "icon": "users",
+      "type": "internal",
+      "ribbon": "",
+      "labelClass": "bg-[#14B8A6]",
+      "iconColor": "text-white"
+    },
+    {
       "id": "card-game",
       "name": "阿不然打牌啰2",
       "desc": "那1在哪里？",
