@@ -89,24 +89,59 @@ const TEST_JS = `(async () => {
   await wait(700);
   log.push('⑨b 清空按钮: 卡片=' + n('.sb-card'));
 
-  // 大图预览
-  q('.sb-card .sb-imgbox').click();
-  await wait(700);
-  const lb = q('#sb-lb');
-  const lbImg = q('#sb-lb-img');
-  log.push('⑨ 大图预览: 打开=' + !lb.hidden + ' 页码=' + q('#sb-lb-page').textContent +
-           ' 原图=' + lbImg.naturalWidth + 'x' + lbImg.naturalHeight +
-           ' 注释=' + q('#sb-lb-kw').textContent.replace(/\\s+/g, ' ').trim().slice(0, 30));
-  q('#sb-lb-next').click();
-  await wait(300);
-  log.push('   下一张: 页码=' + q('#sb-lb-page').textContent);
-  q('#sb-lb-prev').click();
-  await wait(300);
-  q('#sb-lb-close').click();
-  await wait(200);
-  log.push('   关闭: ' + lb.hidden);
+  // ⑨ 大图预览：弹窗必须真的落在视口里。
+  //    页面根节点带 .fade-in，animation-fill-mode:forwards 会永久保留 transform，
+  //    于是它会成为 position:fixed 的包含块；浮层若挂在页面 DOM 内，
+  //    就会按「整页高度」定位——只剩遮罩铺满屏幕，弹窗飞到几屏之外。
+  //    所以在三个不同滚动位置各验一次，而不是只看图片有没有加载出来。
+  const cards = [...document.querySelectorAll('.sb-card')];
+  const probes = [[0, '第一张'], [Math.floor(cards.length / 2), '中间'], [cards.length - 1, '最后一张']];
+  log.push('⑨ 卡片按钮: ' + [...cards[0].querySelectorAll('.sb-acts button')]
+      .map(b => b.textContent.trim()).join(' / ') +
+      ' | 还有「大图」按钮=' + !!cards[0].querySelector('[data-act=view]'));
 
-  // 复制到剪贴板（无头浏览器里验证 ClipboardItem 的 png 字节数）
+  for (const [i, label] of probes) {
+    const c = cards[i];
+    c.scrollIntoView({ block: 'center' });
+    await wait(350);
+    c.querySelector('.sb-imgbox').click();
+    await wait(900);
+    const m = q('#sb-lb .sb-modal').getBoundingClientRect();
+    const im = q('#sb-lb-img');
+    const inView = m.left >= -1 && m.top >= -1 &&
+                   m.right <= window.innerWidth + 1 && m.bottom <= window.innerHeight + 1;
+    log.push('   预览(' + label + ' #' + (i + 1) + '): 弹窗在视口内=' + inView +
+             ' 尺寸=' + m.width.toFixed(0) + 'x' + m.height.toFixed(0) +
+             '@' + m.left.toFixed(0) + ',' + m.top.toFixed(0) +
+             ' | 原图=' + im.naturalWidth + 'x' + im.naturalHeight +
+             ' | 页码=' + q('#sb-lb-page').textContent);
+    if (i === 0) {
+      q('#sb-lb-next').click(); await wait(300);
+      log.push('   下一张: 页码=' + q('#sb-lb-page').textContent);
+      q('#sb-lb-prev').click(); await wait(300);
+      log.push('   上一张: 页码=' + q('#sb-lb-page').textContent);
+      q('#sb-lb-close').click(); await wait(250);
+      log.push('   关闭: hidden=' + q('#sb-lb').hidden);
+      continue;
+    }
+    q('#sb-lb-close').click();
+    await wait(250);
+  }
+
+  // ⑩ 真实点一次卡片上的复制按钮，提示条也必须在视口里
+  const copyBtn = cards[0].querySelector('[data-act="copy"]');
+  copyBtn.click();
+  await wait(1300);
+  const toastEl = q('#sb-toasts .sb-toast');
+  let toastIn = false;
+  if (toastEl) {
+    const tr = toastEl.getBoundingClientRect();
+    toastIn = tr.left >= -1 && tr.right <= window.innerWidth + 1 && tr.bottom <= window.innerHeight + 1;
+  }
+  log.push('⑩ 复制按钮: 文案="' + copyBtn.textContent.trim() + '" | 提示="' +
+           (toastEl ? toastEl.textContent : '（没出现）') + '" 在视口内=' + toastIn);
+
+  // ⑩b 复制链路本身（webp -> png -> 剪贴板）
   const cardIt = window.STICKER_DATA.items[0];
   const res = await fetch('assets/stickers/full/' + cardIt.id + '.webp');
   const blob = await res.blob();
@@ -121,8 +156,8 @@ const TEST_JS = `(async () => {
     const back = await navigator.clipboard.read();
     clipOk = '写入+读回 ' + back[0].types.join(',');
   } catch (e) { clipOk = '异常 ' + e.name + ': ' + e.message; }
-  log.push('⑩ 复制: webp ' + blob.type + ' ' + blob.size + 'B -> png ' + png.size + 'B @' +
-           bmp.width + 'x' + bmp.height + ' | 剪贴板 ' + clipOk);
+  log.push('⑩c 剪贴板: webp ' + blob.type + ' ' + blob.size + 'B -> png ' + png.size + 'B @' +
+           bmp.width + 'x' + bmp.height + ' | ' + clipOk);
 
   log.push('⑪ 页面错误: ' + JSON.stringify(window.__errs || []));
 
@@ -221,6 +256,10 @@ const MOBILE_JS = `(async () => {
 
     await send('Runtime.enable');
     await send('Page.enable');
+    // 无头浏览器里页面不一定处于「已聚焦」状态，而 navigator.clipboard.write 要求
+    // 文档聚焦，否则直接抛 NotAllowedError: Document is not focused。
+    // 模拟聚焦，让剪贴板相关的断言稳定下来（否则会随机失败）。
+    await send('Emulation.setFocusEmulationEnabled', { enabled: true });
     await send('Browser.grantPermissions', {
         origin: new URL(pageUrl).origin,
         permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'],

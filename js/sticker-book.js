@@ -25,6 +25,24 @@ window.App.pages = window.App.pages || {};
         onResize: null,
     };
 
+    // 大图预览与提示条挂在 document.body 上，不放进页面 DOM：
+    // 页面根节点带 .fade-in（animation-fill-mode: forwards 会永久保留 transform），
+    // 而任何非 none 的 transform 都会让祖先成为 position:fixed 的包含块——
+    // 那样浮层会按「整页高度」而不是「视口」去定位，弹窗直接飞到几屏之外，
+    // 只剩遮罩铺满页面（看起来就是点了没反应）。挂到 body 上才不受影响。
+    let overlay = null;
+
+    function removeOverlay() {
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        overlay = null;
+    }
+
+    // 路由离开本工具时自己收尸（core.js 不提供 destroy 钩子）
+    window.addEventListener('hashchange', () => {
+        const route = window.location.hash.replace(/^#/, '').replace(/\/$/, '');
+        if (route !== 'sticker-book') removeOverlay();
+    });
+
     const $ = (id) => document.getElementById(id);
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
@@ -356,18 +374,14 @@ window.App.pages = window.App.pages || {};
                     : `<div class="sb-text dim">（这张图没有关键字）</div>`}
                 <div class="sb-acts">
                     <button class="sb-btn" data-act="copy" title="把图片复制到剪贴板（自动转 PNG）">📋 复制</button>
-                    <button class="sb-btn" data-act="view" title="查看大图">🔍 大图</button>
                 </div>
             </div>`;
 
         card.querySelector('img').addEventListener('error', () => {
             card.querySelector('.sb-imgbox').style.opacity = '.35';
         });
+        // 点图片本身就是看大图
         card.querySelector('.sb-imgbox').addEventListener('click', () => openLightbox(it.id));
-        card.querySelector('[data-act="view"]').addEventListener('click', (e) => {
-            e.stopPropagation();
-            openLightbox(it.id);
-        });
         card.querySelector('[data-act="copy"]').addEventListener('click', (e) => {
             e.stopPropagation();
             copyImage(it, e.currentTarget);
@@ -536,6 +550,34 @@ window.App.pages = window.App.pages || {};
     }
 
     // ------------------------------------------------------------------ 页面
+    // 浮层（大图预览 + 提示条）：挂到 document.body，见文件上方 overlay 的注释
+    const OVERLAY_HTML = `
+        <div id="sb-lb" class="sb-mask" hidden>
+            <div class="sb-modal">
+                <div class="sb-modal-top">
+                    <i data-lucide="image" class="w-4 h-4 text-zinc-400"></i>
+                    <span id="sb-lb-file" class="text-xs font-black text-zinc-700 truncate flex-1"></span>
+                    <span id="sb-lb-page" class="text-[10px] font-black text-zinc-400 font-mono"></span>
+                    <button id="sb-lb-close" class="sb-btn" style="flex:0 0 auto;padding:.3rem .6rem">关闭 (Esc)</button>
+                </div>
+                <div class="sb-lb-wrap">
+                    <div class="sb-lb-img sb-checker"><img id="sb-lb-img" alt=""></div>
+                    <div class="sb-lb-info">
+                        <div id="sb-lb-kv" class="sb-kv"></div>
+                        <div class="text-[10px] font-black text-zinc-400 tracking-widest">文字注释</div>
+                        <div id="sb-lb-kw" class="sb-kw"></div>
+                        <div id="sb-lb-path" class="sb-path"></div>
+                        <div style="display:flex;gap:.35rem;margin-top:auto">
+                            <button id="sb-lb-prev" class="sb-btn">← 上一张</button>
+                            <button id="sb-lb-next" class="sb-btn">下一张 →</button>
+                        </div>
+                        <button id="sb-lb-copy" class="sb-btn" style="flex:0 0 auto;padding:.4rem">📋 复制图片</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="sb-toasts"></div>`;
+
     window.App.pages.stickerBook = {
         render: function () {
             if (!dataset()) {
@@ -597,34 +639,6 @@ window.App.pages = window.App.pages || {};
                     <div id="sb-grid"></div>
                     <div id="sb-empty" class="sb-empty" hidden></div>
                 </section>
-
-                <!-- 大图预览 -->
-                <div id="sb-lb" class="sb-mask" hidden>
-                    <div class="sb-modal">
-                        <div class="sb-modal-top">
-                            <i data-lucide="image" class="w-4 h-4 text-zinc-400"></i>
-                            <span id="sb-lb-file" class="text-xs font-black text-zinc-700 truncate flex-1"></span>
-                            <span id="sb-lb-page" class="text-[10px] font-black text-zinc-400 font-mono"></span>
-                            <button id="sb-lb-close" class="sb-btn" style="flex:0 0 auto;padding:.3rem .6rem">关闭 (Esc)</button>
-                        </div>
-                        <div class="sb-lb-wrap">
-                            <div class="sb-lb-img sb-checker"><img id="sb-lb-img" alt=""></div>
-                            <div class="sb-lb-info">
-                                <div id="sb-lb-kv" class="sb-kv"></div>
-                                <div class="text-[10px] font-black text-zinc-400 tracking-widest">文字注释</div>
-                                <div id="sb-lb-kw" class="sb-kw"></div>
-                                <div id="sb-lb-path" class="sb-path"></div>
-                                <div style="display:flex;gap:.35rem;margin-top:auto">
-                                    <button id="sb-lb-prev" class="sb-btn">← 上一张</button>
-                                    <button id="sb-lb-next" class="sb-btn">下一张 →</button>
-                                </div>
-                                <button id="sb-lb-copy" class="sb-btn" style="flex:0 0 auto;padding:.4rem">📋 复制图片</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="sb-toasts"></div>
             </div>`;
         },
 
@@ -638,6 +652,12 @@ window.App.pages = window.App.pages || {};
             const grid = $('sb-grid');
 
             if (!grid) return; // 数据缺失时的错误页
+
+            removeOverlay();
+            overlay = document.createElement('div');
+            overlay.id = 'sb-overlay';
+            overlay.innerHTML = OVERLAY_HTML;
+            document.body.appendChild(overlay);
 
             // 恢复上次的搜索词
             qInput.value = S.q;
