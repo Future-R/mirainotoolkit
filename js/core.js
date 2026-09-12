@@ -118,7 +118,8 @@ window.App.Router = {
         'jitter-text': 'jitterText',
         'video-rotate': 'videoRotator',
         'character-intro': 'characterIntro',
-        'card-game': 'cardGame'
+        'card-game': 'cardGame',
+        'sticker-book': 'stickerBook'
     },
 
     init: function() {

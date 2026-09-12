@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "node serve-local.js",
     "start": "node serve-local.js",
-    "build": "echo \"Nothing to build\""
+    "build": "echo \"Nothing to build\"",
+    "stickers": "python tools/build-stickers.py"
   }
 }
