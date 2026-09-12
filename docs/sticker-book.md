@@ -10,36 +10,65 @@
 | | 本地管理器 | 本工具 |
 | --- | --- | --- |
 | 运行方式 | `python sticker.py serve`，本地 8731 端口 | 纯静态，直接跟着工具箱部署 |
-| 图片 | 原图从磁盘实时读 | 构建时转成 WebP 存进 `assets/stickers/` |
-| 元数据 | 运行时解析 `.meta` | 构建时解析成 `js/sticker-data.js` |
-| 编辑 meta / OCR 扫描 / 拖拽排序 | 有 | **没有**（去源目录改，再重新构建） |
+| 图片 | 原图从磁盘实时读 | 同步时转成 WebP 存进 `assets/stickers/` |
+| 元数据 | 运行时解析 `.meta` | 同步时解析成 `js/sticker-data.js` |
+| 编辑 meta / OCR 扫描 / 拖拽排序 | 有 | **没有**（去源目录改，再 `npm run stickers`） |
 | 浏览目录、关键字搜索、瀑布流、大图预览、复制 | 有 | 有 |
 
-要改关键字或调序号，仍然去本地管理器里改；改完在仓库根目录重新跑一次构建脚本即可同步。
+要改关键字或调序号，仍然去本地管理器里改；改完在仓库根目录跑一次 `npm run stickers` 即可同步。
 
 ## 数据管道
 
 ```
 D:\表情包\爱染诚社长\xxx.png  +  xxx.png.meta
         │
-        │  python tools/build-stickers.py
+        │  python tools/build-stickers.py       ← 增量同步，反复跑同一条即可
         ▼
 assets/stickers/full/<id>.webp     原图（EXIF 摆正、保留透明通道、质量 92）
 assets/stickers/thumb/<id>.webp    瀑布流缩略图（最长边 480）
+assets/stickers/.sync.json         同步状态（源文件指纹），别手改
 js/sticker-data.js                 window.STICKER_DATA 清单
 ```
 
-`id = sha1(相对路径)[:12]`，所以源文件改名/挪目录会换一个新 id，旧资源会在下次构建时被清掉。
+`id = sha1(相对路径)[:12]`，所以源文件改名/挪目录会换一个新 id，旧资源会在下次同步时被清掉。
 
-### 重新生成
+### 保持同步
+
+在本地管理器里加图、改序号、改关键字之后，在仓库根目录跑一次就行：
 
 ```powershell
-pip install pillow                      # 只依赖 Pillow
-python tools/build-stickers.py          # 默认读 D:\表情包
-python tools/build-stickers.py --root "D:\别的地方\表情包"
-python tools/build-stickers.py --dry-run --verbose   # 只看统计，不写文件
-python tools/build-stickers.py --quality 95 --thumb-longest 640
+pip install pillow                     # 只依赖 Pillow
+npm run stickers                       # = python tools/build-stickers.py
+npm run stickers:watch                 # 常驻，源目录一变就自动同步
 ```
+
+每次都会打印一份变化报告，例如：
+
+```
+源目录  D:\表情包
+目录    喜多川穷哥 14、未分类 66、爱染诚社长 69、黎深牛 6
+图片    155 张，源文件 58.7 MB
+变化    新增 16、序号变化 10、关键字变化 1（未变 139 张，重新编码 16 张）
+        + 黎深牛/OK.jpg
+        序号 未分类/16BBC7ECBC...jpg：16 → 10
+        关键字 未分类/B94CD17B4F...jpg：目前智力不足，针对这方面加强训练吧。 → 目前智力不足，请针对这方面加强训练吧。
+清单    js/sticker-data.js 已更新
+资源    原图 155 个 / 8.2 MB，缩略图 / 2.1 MB（源文件的 14%）
+耗时    1.2s
+```
+
+判断「要不要重新生成」的规则：
+
+| 情况 | 行为 |
+| --- | --- |
+| 指纹（size + mtime_ns）没变、资源也都在 | 直接复用，不解码不编码 |
+| **同名文件被换了内容** | 指纹变了 → 重新生成（旧版本只看文件在不在，会漏掉这种） |
+| 改了 `.meta` 的关键字 / 序号 | 不动图片，只重写清单 |
+| 源目录删了图 | 对应资源被清理，状态里也删掉 |
+| 清单内容一模一样 | 不重写文件，避免只改时间戳的无意义 diff |
+| 有图没有 `.meta` / 序号是 -1 | 报告里会单独提醒 |
+
+`--watch` 会每 3 秒（`--interval` 可调）比对一次源目录指纹，只在真的变了时才动手并打印报告。
 
 | 参数 | 说明 |
 | --- | --- |
@@ -47,11 +76,26 @@ python tools/build-stickers.py --quality 95 --thumb-longest 640
 | `--quality N` | 原图 WebP 质量，默认 92 |
 | `--full-longest N` | 原图最长边上限，默认 0（不缩放） |
 | `--thumb-longest N` / `--thumb-quality N` | 缩略图最长边（默认 480）/ 质量（默认 80） |
-| `--force` | 已有资源也重新生成 |
-| `--dry-run` | 只统计，一个文件都不写 |
+| `--force` | 忽略缓存，全部重新生成 |
+| `--dry-run` | 只打印变化，一个文件都不写 |
+| `--verbose` | 逐个打印正在处理的图片 |
+| `--watch` / `--interval N` | 常驻自动同步 / 轮询间隔秒数（默认 3） |
 
 源目录里含 `sticker.py` 的文件夹（也就是 `_manager` 本身）、以 `.` 开头的目录、`.cache`、
 `__pycache__` 都会被跳过；`.gif` 不在收录范围内。
+
+> 换过 `--quality` / `--thumb-longest` 这类参数后要配 `--force`，否则指纹没变会被当成「无需重建」。
+
+### 同步逻辑的自检
+
+`tools/test-sync.py` 在一个临时沙箱仓库里跑完整流程，不碰真实资源和源库：
+
+```powershell
+npm run stickers:test
+```
+
+覆盖首次同步、幂等重跑、同名换内容、改关键字、改序号、删图清理、缺 `.meta` 提醒、
+清单不空转等 15 项断言。
 
 ### `.meta` 解析规则
 
@@ -110,13 +154,14 @@ node tools/e2e-stickers.js 9222 http://127.0.0.1:8123/
 
 ## 体积
 
-以 `D:\表情包` 的 139 张图（源文件 57.9 MB）为例：
+以 `D:\表情包` 的 155 张图（源文件 58.7 MB）为例：
 
 | | 大小 |
 | --- | --- |
-| `assets/stickers/full` | 7.8 MB（源文件的 14%） |
-| `assets/stickers/thumb` | 2.0 MB |
-| `js/sticker-data.js` | 22.9 KB |
+| `assets/stickers/full` | 8.2 MB（源文件的 14%） |
+| `assets/stickers/thumb` | 2.1 MB |
+| `js/sticker-data.js` | 23 KB |
+| `assets/stickers/.sync.json` | 23 KB |
 
 这份资源是要提交进仓库的：纯静态站没有后端，跨源读不到本地磁盘上的图片，
 不放进仓库就没法浏览、更没法复制。想彻底不引入这些二进制，只能放弃线上可用性、

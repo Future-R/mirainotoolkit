@@ -5,6 +5,8 @@
     "dev": "node serve-local.js",
     "start": "node serve-local.js",
     "build": "echo \"Nothing to build\"",
-    "stickers": "python tools/build-stickers.py"
+    "stickers": "python tools/build-stickers.py",
+    "stickers:watch": "python tools/build-stickers.py --watch",
+    "stickers:test": "python tools/test-sync.py"
   }
 }
