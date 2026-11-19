@@ -1,0 +1,1 @@
+"use strict";(self.rspackChunkchat_demo=self.rspackChunkchat_demo||[]).push([[6989],{6076(e,a,n){var r;n.d(a,{lA:()=>p}),"function"==typeof SuppressedError&&SuppressedError;async function p(e,a={},n){return window.__TAURI_INTERNALS__.invoke(e,a,n)}r=new WeakMap,new WeakMap,new WeakMap,new WeakMap,new WeakSet,new WeakMap}}]);

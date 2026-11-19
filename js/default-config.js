@@ -3,6 +3,18 @@ window.DEFAULT_TOOLBOX_CONFIG = {
   "description": "各种小工具。",
   "tools": [
     {
+      "id": "mirai-chat",
+      "name": "未来聊",
+      "desc": "AI 对话工具",
+      "path": "./chat/",
+      "icon": "message-circle",
+      "type": "internal",
+      "standalone": true,
+      "ribbon": "",
+      "labelClass": "bg-[#2563EB]",
+      "iconColor": "text-white"
+    },
+    {
       "id": "counter",
       "name": "手动计数器",
       "desc": "可能是打击感最强的计数器",

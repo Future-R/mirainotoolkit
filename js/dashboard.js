@@ -11,9 +11,15 @@ window.App.pages.dashboard = {
 
         const renderCard = (tool) => {
             const isExt = tool.type === 'external';
+            const isStandalone = tool.type === 'internal' && tool.standalone === true;
+            const tag = isStandalone ? 'a' : 'div';
             const onclick = isExt 
                     ? `window.open('${tool.path}', '_blank', 'noopener,noreferrer')`
                     : `window.App.Router.navigate('${tool.path}')`;
+            const navigation = isStandalone ? `href="${tool.path}"` : `onclick="${onclick}"`;
+            const focus = isStandalone
+                ? ' focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zinc-600'
+                : '';
             
             // Custom Ribbon Logic (Replaced 'dev' with 'ribbon')
             const ribbonContent = tool.ribbon 
@@ -23,7 +29,7 @@ window.App.pages.dashboard = {
                 : '';
             
             return `
-            <div onclick="${onclick}" class="cassette-card cursor-pointer group">
+            <${tag} ${navigation} class="cassette-card cursor-pointer group${focus}">
                 <!-- Ribbon -->
                 ${ribbonContent}
 
@@ -64,7 +70,7 @@ window.App.pages.dashboard = {
 
                 <!-- Bottom Tape Area -->
                 <div class="cassette-bottom"></div>
-            </div>
+            </${tag}>
             `;
         };
 

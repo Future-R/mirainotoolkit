@@ -1,0 +1,1 @@
+"use strict";(self.rspackChunkchat_demo=self.rspackChunkchat_demo||[]).push([[3258],{7249(e,n,a){a.d(n,{openUrl:()=>c});var s=a(6076);async function c(e,n){await (0,s.lA)("plugin:opener|open_url",{url:e,with:n})}}}]);
